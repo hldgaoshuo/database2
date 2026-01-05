@@ -8,11 +8,11 @@ SIZE_BIG_INT = 8
 class BigInt(Value):
 
     def __init__(self, content: int) -> None:
-        super().__init__(ValueType.BIG_INT, content, SIZE_BIG_INT)
+        super().__init__(ValueType.BIG_INT, content)
 
     def __bytes__(self) -> bytes:
         value_type_row = self.value_type.to_bytes(length=1, byteorder='big')
-        content_row = self.content.to_bytes(length=self.size, byteorder='big')
+        content_row = self.content.to_bytes(length=SIZE_BIG_INT, byteorder='big')
         result = value_type_row + content_row
         return result
 

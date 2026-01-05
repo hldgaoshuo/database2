@@ -12,7 +12,8 @@ class Char(Value):
         if space_num < 0:
             raise ValueError("字符串长度超出限制")
         content = content + ' ' * space_num
-        super().__init__(ValueType.CHAR, content, size)
+        super().__init__(ValueType.CHAR, content)
+        self.size = size
 
     def __bytes__(self) -> bytes:
         value_type_row = self.value_type.to_bytes(length=1, byteorder='big')

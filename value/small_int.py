@@ -8,11 +8,11 @@ SIZE_SMALL_INT = 2
 class SmallInt(Value):
 
     def __init__(self, content: int) -> None:
-        super().__init__(ValueType.SMALL_INT, content, SIZE_SMALL_INT)
+        super().__init__(ValueType.SMALL_INT, content)
 
     def __bytes__(self) -> bytes:
         value_type_row = self.value_type.to_bytes(length=1, byteorder='big')
-        content_row = self.content.to_bytes(length=self.size, byteorder='big')
+        content_row = self.content.to_bytes(length=SIZE_SMALL_INT, byteorder='big')
         result = value_type_row + content_row
         return result
 

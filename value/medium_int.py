@@ -8,11 +8,11 @@ SIZE_MEDIUM_INT = 3
 class MediumInt(Value):
 
     def __init__(self, content: int) -> None:
-        super().__init__(ValueType.MEDIUM_INT, content, SIZE_MEDIUM_INT)
+        super().__init__(ValueType.MEDIUM_INT, content)
 
     def __bytes__(self) -> bytes:
         value_type_row = self.value_type.to_bytes(length=1, byteorder='big')
-        content_row = self.content.to_bytes(length=self.size, byteorder='big')
+        content_row = self.content.to_bytes(length=SIZE_MEDIUM_INT, byteorder='big')
         result = value_type_row + content_row
         return result
 
