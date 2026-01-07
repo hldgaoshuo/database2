@@ -1,0 +1,2 @@
+class BNode:
+    pass
