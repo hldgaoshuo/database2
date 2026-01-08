@@ -1,23 +1,18 @@
 from enum import IntEnum, auto
 
 
+BYTES_VALUE_TYPE = 1
+
+
 class ValueType(IntEnum):
-    TINY_INT = auto()
-    SMALL_INT = auto()
-    MEDIUM_INT = auto()
     INT = auto()
-    BIG_INT = auto()
-    CHAR = auto()
-    VARCHAR = auto()
-    TINY_TEXT = auto()
-    TEXT = auto()
-    MEDIUM_TEXT = auto()
-    LONG_TEXT = auto()
+    STRING = auto()
+    BOOL = auto()
 
 
 class Value:
 
-    def __init__(self, value_type: ValueType, content: int | str) -> None:
+    def __init__(self, value_type: ValueType, content: int | str | bool) -> None:
         self.value_type: ValueType = value_type
         self.content: int | str = content
 

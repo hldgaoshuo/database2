@@ -1,6 +1,6 @@
 import pytest
 
-from value2.bool import new_bool
+from value.bool import new_bool
 
 
 def test_bytes():

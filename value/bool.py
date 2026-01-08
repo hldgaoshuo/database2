@@ -1,5 +1,5 @@
 from io import BytesIO
-from value2.value import Value, ValueType, BYTES_VALUE_TYPE
+from value.value import Value, ValueType, BYTES_VALUE_TYPE
 
 BYTES_BOOL = 1
 
@@ -20,7 +20,7 @@ def new_bool(content: bool) -> Bool:
     return Bool(content)
 
 
-def new_int_from_bytes(buf: BytesIO) -> Bool:
+def new_bool_from_bytes(buf: BytesIO) -> Bool:
     bs = buf.read(BYTES_BOOL)
     content = bool.from_bytes(bs, byteorder='big')
     return Bool(content)

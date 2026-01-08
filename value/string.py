@@ -1,5 +1,5 @@
 from io import BytesIO
-from value2.value import Value, ValueType, BYTES_VALUE_TYPE
+from value.value import Value, ValueType, BYTES_VALUE_TYPE
 
 BYTES_STRING_SIZE = 1
 BYTES_STRING = 255
@@ -30,6 +30,7 @@ def new_string(content: str) -> STRING:
 def new_string_from_bytes(buf: BytesIO) -> STRING:
     content_size_bs = buf.read(BYTES_STRING_SIZE)
     content_size = int.from_bytes(content_size_bs, byteorder='big')
-    content_bs = buf.read(content_size)
+    content_bs = buf.read(BYTES_STRING)
     content = content_bs.decode('utf-8')
+    content = content[:content_size]
     return STRING(content)

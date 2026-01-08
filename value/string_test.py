@@ -1,17 +1,17 @@
 import pytest
 
-from value.varchar import new_varchar
+from value.string import new_string, BYTES_STRING
 
 
 def test_bytes():
-    o = new_varchar("abc", 4)
+    o = new_string("abc")
     bs = bytes(o)
-    assert bs == b'\x07' + b'\x04' + b'\x00\x03' + b'abc'
+    assert bs == b'\x02' + b'\x03' + b'abc' + b' ' * (BYTES_STRING - 3)
 
 
 def test_bytes_overflow():
     with pytest.raises(ValueError):
-        o = new_varchar("abc", 2)
+        o = new_string("a" * (BYTES_STRING + 1))
         bs = bytes(o)
 
 

@@ -4,14 +4,14 @@ from value.int import new_int
 
 
 def test_bytes():
-    o = new_int(4000000000)
+    o = new_int(100)
     bs = bytes(o)
-    assert bs == b'\x04' + b'\xEE\x6B\x28\x00'
+    assert bs == b'\x01' + b'\x00\x00\x00\x00\x00\x00\x00\x64'
 
 
 def test_bytes_overflow():
     with pytest.raises(OverflowError):
-        o = new_int(5000000000)
+        o = new_int(20000000000000000000)
         bs = bytes(o)
 
 

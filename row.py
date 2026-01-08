@@ -1,17 +1,9 @@
 from io import BytesIO
 
-from value.big_int import new_big_int_from_bytes
-from value.char import new_char_from_bytes
 from value.int import new_int_from_bytes
-from value.long_text import new_long_text_from_bytes
-from value.medium_int import new_medium_int_from_bytes
-from value.medium_text import new_medium_text_from_bytes
-from value.small_int import new_small_int_from_bytes
-from value.text import new_text_from_bytes
-from value.tiny_int import new_tiny_int_from_bytes
-from value.tiny_text import new_tiny_text_from_bytes
 from value.value import Value, ValueType
-from value.varchar import new_varchar_from_bytes
+from value.bool import new_bool_from_bytes
+from value.string import new_string_from_bytes
 
 
 class Row:
@@ -49,38 +41,14 @@ def new_row_from_bytes(buf: BytesIO) -> Row:
     while True:
         value_type_bs = buf.read(1)
         value_type = int.from_bytes(value_type_bs, byteorder='big')
-        if value_type == ValueType.TINY_INT:
-            value = new_tiny_int_from_bytes(buf)
-            row.values_add(value)
-        elif value_type == ValueType.SMALL_INT:
-            value = new_small_int_from_bytes(buf)
-            row.values_add(value)
-        elif value_type == ValueType.MEDIUM_INT:
-            value = new_medium_int_from_bytes(buf)
-            row.values_add(value)
-        elif value_type == ValueType.INT:
+        if value_type == ValueType.INT:
             value = new_int_from_bytes(buf)
             row.values_add(value)
-        elif value_type == ValueType.BIG_INT:
-            value = new_big_int_from_bytes(buf)
+        elif value_type == ValueType.BOOL:
+            value = new_bool_from_bytes(buf)
             row.values_add(value)
-        elif value_type == ValueType.CHAR:
-            value = new_char_from_bytes(buf)
-            row.values_add(value)
-        elif value_type == ValueType.VARCHAR:
-            value = new_varchar_from_bytes(buf)
-            row.values_add(value)
-        elif value_type == ValueType.TINY_TEXT:
-            value = new_tiny_text_from_bytes(buf)
-            row.values_add(value)
-        elif value_type == ValueType.TEXT:
-            value = new_text_from_bytes(buf)
-            row.values_add(value)
-        elif value_type == ValueType.MEDIUM_TEXT:
-            value = new_medium_text_from_bytes(buf)
-            row.values_add(value)
-        elif value_type == ValueType.LONG_TEXT:
-            value = new_long_text_from_bytes(buf)
+        elif value_type == ValueType.STRING:
+            value = new_string_from_bytes(buf)
             row.values_add(value)
         elif value_type_bs == b'\0':
             return row

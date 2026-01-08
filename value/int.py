@@ -1,8 +1,7 @@
 from io import BytesIO
-from value.value import Value, ValueType
+from value.value import Value, ValueType, BYTES_VALUE_TYPE
 
-
-SIZE_INT = 4
+BYTES_INT = 8
 
 
 class Int(Value):
@@ -11,8 +10,8 @@ class Int(Value):
         super().__init__(ValueType.INT, content)
 
     def __bytes__(self) -> bytes:
-        value_type_row = self.value_type.to_bytes(length=1, byteorder='big')
-        content_row = self.content.to_bytes(length=SIZE_INT, byteorder='big')
+        value_type_row = self.value_type.to_bytes(length=BYTES_VALUE_TYPE, byteorder='big')
+        content_row = self.content.to_bytes(length=BYTES_INT, byteorder='big')
         result = value_type_row + content_row
         return result
 
@@ -22,6 +21,6 @@ def new_int(content: int) -> Int:
 
 
 def new_int_from_bytes(buf: BytesIO) -> Int:
-    bs = buf.read(SIZE_INT)
+    bs = buf.read(BYTES_INT)
     content = int.from_bytes(bs, byteorder='big')
     return Int(content)
