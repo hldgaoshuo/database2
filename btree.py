@@ -29,16 +29,12 @@ class BNode:
     def split(self):
         raise NotImplementedError
 
-    def persist(self):
-        self.pager.set_page_bs(self.page_index, bytes(self))
-
 
 class BNodeLeaf(BNode):
 
     def __init__(self, pager: Pager, degree: int, page_index: int):
         super().__init__(pager, degree, page_index)
         self.rows: list[Row] = []
-        self.lock: threading.Lock = threading.Lock()
 
     def __bytes__(self) -> bytes:
         """
@@ -63,47 +59,29 @@ class BNodeLeaf(BNode):
             return None
         return self.rows[i]
 
-    def get_add_index(self, key: int) -> int:
-        i = 0
-        n = len(self.keys)
-        while i < n and key > self.keys[i]:
-            i += 1
-        return i
+    def set(self, key: int, row: Row):
+        i = len(self.keys) - 1
+        while i >= 0 and key < self.keys[i]:
+            i = i - 1
+        self.keys.insert(i + 1, key)
+        self.rows.insert(i + 1, row)
+        self.pager.set_page_bs(self.page_index, bytes(self))
 
-    def add(self, key: int, value: Row) -> 'BNodeLeaf':
-        i = self.get_add_index(key)
-        new_keys = self.keys[:]
-        new_rows = self.rows[:]
-        new_keys.insert(i, key)
-        new_rows.insert(i, value)
+    def split(self) -> 'BNodeLeaf':
+        new_keys = self.keys[self.degree:]
+        new_rows = self.rows[self.degree:]
         new_node = new_b_node_leaf(self.pager, new_keys, new_rows)
+        self.pager.set_page_bs(new_node.page_index, bytes(new_node))
+        self.keys = self.keys[:self.degree]
+        self.rows = self.rows[:self.degree]
+        self.pager.set_page_bs(self.page_index, bytes(self))
         return new_node
-
-    def update(self, keys: list[int], rows: list[Row], page_index: int):
-        with self.lock:
-            self.keys = keys
-            self.rows = rows
-            self.page_index = page_index
-
-    def set(self, key: int, value: Row):
-        new_node = self.add(key, value)
-        new_node.persist()
-        self.update(new_node.keys, new_node.rows, new_node.page_index)
-
-    def split(self) -> tuple['BNodeLeaf', 'BNodeLeaf']:
-        left_keys = self.keys[:DEGREE]
-        left_rows = self.rows[:DEGREE]
-        left = new_b_node_leaf(self.pager, left_keys, left_rows)
-        right_keys = self.keys[DEGREE:]
-        right_rows = self.rows[DEGREE:]
-        right = new_b_node_leaf(self.pager, right_keys, right_rows)
-        return left, right
 
     def __getitem__(self, key: int) -> t.Optional[Row]:
         return self.get(key)
 
-    def __setitem__(self, key: int, value: Row):
-        self.set(key, value)
+    def __setitem__(self, key: int, row: Row):
+        self.set(key, row)
 
 
 class BNodeInternal(BNode):
@@ -130,62 +108,51 @@ class BNodeInternal(BNode):
         return r
 
     def get(self, key: int) -> t.Optional[Row]:
-        _, page_bs = self.get_page_index_page_bs(key)
+        _, page_bs = self.get_index_page_bs(key)
         node_down = new_b_node_from_bytes(page_bs, self.pager)
         node_result = node_down.get(key)
         return node_result
 
     def set(self, key: int, value: Row):
-        page_index, page_bs = self.get_page_index_page_bs(key)
+        index, page_bs = self.get_index_page_bs(key)
         node_down = new_b_node_from_bytes(page_bs, self.pager)
         if node_down.is_full():
-            left, right = node_down.split()
-            if key < right.keys[0]:
-                left.set(key, value)
-                right.persist()
+            new_node = node_down.split()
+            if key > self.keys[index]:
+                new_node.set(key, value)
             else:
-                right.set(key, value)
-                left.persist()
-            new_keys = self.keys[:]
-            new_page_indices = self.page_indices[:]
-            if type(node_down) == BNodeLeaf:
-                new_keys.insert(page_index, node_down.keys[DEGREE - 1])
-            elif type(node_down) == BNodeInternal:
-                new_keys.insert(page_index, node_down.keys[DEGREE])
+                node_down.set(key, value)
+            if type(node_down) is BNodeLeaf:
+                self.keys.insert(index, node_down.keys[self.degree])
+            elif type(node_down) is BNodeInternal:
+                self.keys.insert(index, node_down.keys[self.degree - 1])
             else:
-                raise ValueError("未知节点类型")
-            new_page_indices[page_index] = left.page_index
-            new_page_indices.insert(page_index + 1, right.page_index)
-            new_node = new_b_node_internal(self.pager, new_keys, new_page_indices)
-            new_node.persist()
-            self.update(new_keys, new_page_indices, new_node.page_index)
+                raise ValueError("未知数据类型")
+            self.page_indices.insert(index + 1, new_node.page_index)
+            self.pager.set_page_bs(self.page_index, bytes(self))
         else:
             node_down.set(key, value)
 
-    def get_page_index_page_bs(self, key: int) -> tuple[int, BytesIO]:
-        i = 0
-        n = len(self.keys)
-        while i < n and key > self.keys[i]:
-            i += 1
+    def get_index_page_bs(self, key: int) -> tuple[int, BytesIO]:
+        i = len(self.keys) - 1
+        while i >= 0 and key < self.keys[i]:
+            i = i - 1
+        # i 的最小值为 -1，children 的最小下标是 0，所以要加一。
+        i = i + 1
         page_index = self.page_indices[i]
         bs = self.pager.get_page_bs(page_index)
         buf = BytesIO(bs)
         return i, buf
 
-    def split(self) -> tuple['BNodeInternal', 'BNodeInternal']:
-        left_keys = self.keys[:DEGREE - 1]
-        left_page_indices = self.page_indices[:DEGREE]
-        left = new_b_node_internal(self.pager, left_keys, left_page_indices)
-        right_keys = self.keys[DEGREE:]
-        right_page_indices = self.page_indices[DEGREE:]
-        right = new_b_node_internal(self.pager, right_keys, right_page_indices)
-        return left, right
-
-    def update(self, keys: list[int], page_indices: list[int], page_index: int):
-        with self.lock:
-            self.keys = keys
-            self.page_indices = page_indices
-            self.page_index = page_index
+    def split(self) -> 'BNodeInternal':
+        new_keys = self.keys[self.degree:]
+        new_page_indices = self.page_indices[self.degree:]
+        new_node = new_b_node_internal(self.pager, new_keys, new_page_indices)
+        self.pager.set_page_bs(new_node.page_index, bytes(new_node))
+        self.keys = self.keys[:self.degree - 1]
+        self.page_indices = self.page_indices[:self.degree]
+        self.pager.set_page_bs(self.page_index, bytes(self))
+        return new_node
 
     def __getitem__(self, key: int) -> t.Optional[Row]:
         return self.get(key)
