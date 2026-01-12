@@ -1,5 +1,3 @@
-# todo degree 应该是计算出来的，但下面为了方便，先统一传 2
-import threading
 import typing as t
 from io import BytesIO
 
@@ -9,7 +7,7 @@ from pager import Pager
 BYTES_IS_LEAF = 1
 BYTES_PAGE_INDEX = 4
 
-DEGREE = 2
+DEGREE = 2  # todo
 
 
 class BNode:
@@ -63,14 +61,17 @@ class BNodeLeaf(BNode):
         i = len(self.keys) - 1
         while i >= 0 and key < self.keys[i]:
             i = i - 1
-        self.keys.insert(i + 1, key)
-        self.rows.insert(i + 1, row)
+        if key == self.keys[i]:
+            self.rows[i] = row
+        else:
+            self.keys.insert(i + 1, key)
+            self.rows.insert(i + 1, row)
         self.pager.set_page_bs(self.page_index, bytes(self))
 
     def split(self) -> 'BNodeLeaf':
         new_keys = self.keys[self.degree:]
         new_rows = self.rows[self.degree:]
-        new_node = new_b_node_leaf(self.pager, new_keys, new_rows)
+        new_node = new_b_node_leaf(self.pager, DEGREE, new_keys, new_rows)
         self.pager.set_page_bs(new_node.page_index, bytes(new_node))
         self.keys = self.keys[:self.degree]
         self.rows = self.rows[:self.degree]
@@ -89,7 +90,6 @@ class BNodeInternal(BNode):
     def __init__(self, pager: Pager, degree: int, page_index: int):
         super().__init__(pager, degree, page_index)
         self.page_indices: list[int] = []
-        self.lock: threading.Lock = threading.Lock()
 
     def __bytes__(self) -> bytes:
         """
@@ -147,7 +147,7 @@ class BNodeInternal(BNode):
     def split(self) -> 'BNodeInternal':
         new_keys = self.keys[self.degree:]
         new_page_indices = self.page_indices[self.degree:]
-        new_node = new_b_node_internal(self.pager, new_keys, new_page_indices)
+        new_node = new_b_node_internal(self.pager, DEGREE, new_keys, new_page_indices)
         self.pager.set_page_bs(new_node.page_index, bytes(new_node))
         self.keys = self.keys[:self.degree - 1]
         self.page_indices = self.page_indices[:self.degree]
@@ -161,17 +161,17 @@ class BNodeInternal(BNode):
         self.set(key, value)
 
 
-def new_b_node_internal(pager: Pager, keys: list[int], page_indices: list[int]) -> BNodeInternal:
+def new_b_node_internal(pager: Pager, degree: int, keys: list[int], page_indices: list[int]) -> BNodeInternal:
     page_index = pager.get_page_index()
-    node = BNodeInternal(pager, DEGREE, page_index)
+    node = BNodeInternal(pager, degree, page_index)
     node.keys = keys
     node.page_indices = page_indices
     return node
 
 
-def new_b_node_leaf(pager: Pager, keys: list[int], rows: list[Row]) -> BNodeLeaf:
+def new_b_node_leaf(pager: Pager, degree: int, keys: list[int], rows: list[Row]) -> BNodeLeaf:
     page_index = pager.get_page_index()
-    node = BNodeLeaf(pager, DEGREE, page_index)
+    node = BNodeLeaf(pager, degree, page_index)
     node.keys = keys
     node.rows = rows
     return node
