@@ -15,6 +15,9 @@ class Int(Value):
         result = value_type_row + content_row
         return result
 
+    def __repr__(self):
+        return f'Int({self.content})'
+
 
 def new_int(content: int) -> Int:
     return Int(content)

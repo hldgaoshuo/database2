@@ -15,6 +15,9 @@ class Bool(Value):
         result = value_type_row + content_row
         return result
 
+    def __repr__(self):
+        return f'Bool({self.content})'
+
 
 def new_bool(content: bool) -> Bool:
     return Bool(content)

@@ -2,7 +2,7 @@ from io import BytesIO
 from value.value import Value, ValueType, BYTES_VALUE_TYPE
 
 BYTES_STRING_SIZE = 1
-BYTES_STRING = 255
+BYTES_STRING = 10
 
 
 class STRING(Value):
@@ -21,6 +21,9 @@ class STRING(Value):
         content_row = self.content.encode('utf-8')
         result = value_type_row + content_size_row + content_row
         return result
+
+    def __repr__(self):
+        return f'STRING({self.content})'
 
 
 def new_string(content: str) -> STRING:

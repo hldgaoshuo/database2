@@ -34,6 +34,10 @@ class Row:
                 return False
         return True
 
+    def __repr__(self):
+        r = f'Row(oid={self.oid}, {self.values})'
+        return r
+
 
 def new_row(oid: int, values: list[Value]) -> Row:
     return Row(oid, values)
