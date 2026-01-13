@@ -110,9 +110,12 @@ class Node:
         i = len(self.keys) - 1
         while i >= 0 and key < self.keys[i]:
             i = i - 1
-        i = i + 1
-        self.keys.insert(i, key)
-        self.rows.insert(i, row)
+        if i >= 0 and key == self.keys[i]:
+            self.rows[i] = row
+        else:
+            i = i + 1
+            self.keys.insert(i, key)
+            self.rows.insert(i, row)
 
     def persist(self):
         self.pager.set_page_bs(self.page_index, bytes(self))
