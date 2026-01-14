@@ -13,14 +13,16 @@ BYTES_LEN_PAGE_INDICES = 4
 
 class Node:
 
-    def __init__(self, pager: Pager, degree: int, page_index: int, is_leaf: bool):
+    def __init__(self, pager: Pager, degree: int, is_leaf: bool, page_index: int):
         self.pager: Pager = pager
         self.degree: int = degree
-        self.page_index: int = page_index
         self.is_leaf: bool = is_leaf
+        self.page_index: int = page_index
         self.keys: list[int] = []
         self.rows: list[Row] = []
         self.page_indices: list[int] = []
+        self.left_page_index: int = -1
+        self.right_page_index: int = -1
 
     def __bytes__(self) -> bytes:
         return self.to_bytes()
@@ -53,6 +55,8 @@ class Node:
             r += len(self.rows).to_bytes(length=BYTES_LEN_ROWS, byteorder='big')
             for row in self.rows:
                 r += bytes(row)
+            r += self.left_page_index.to_bytes(length=BYTES_PAGE_INDEX, byteorder='big')
+            r += self.right_page_index.to_bytes(length=BYTES_PAGE_INDEX, byteorder='big')
         else:
             r += len(self.page_indices).to_bytes(length=BYTES_LEN_PAGE_INDICES, byteorder='big')
             for page_index in self.page_indices:
@@ -137,6 +141,13 @@ class Node:
             new.rows = self.rows[self.degree:]
             self.keys = self.keys[:self.degree]
             self.rows = self.rows[:self.degree]
+            if self.right_page_index != -1:
+                right = new_node_from_page(self.pager, self.degree, self.right_page_index)
+                self.right_page_index = new.page_index
+                right.left_page_index = new.page_index
+                new.left_page_index = self.page_index
+                new.right_page_index = right.page_index
+                right.persist()
         else:
             new.keys = self.keys[self.degree:]
             new.page_indices = self.page_indices[self.degree:]
@@ -149,7 +160,7 @@ class Node:
 
 def new_node(pager: Pager, degree: int, is_leaf: bool):
     page_index = pager.get_page_index()
-    node = Node(pager, degree, page_index, is_leaf)
+    node = Node(pager, degree, is_leaf, page_index)
     return node
 
 
@@ -162,7 +173,7 @@ def new_node_from_page(pager: Pager, degree: int, page_index: int) -> Node:
     _page_index = int.from_bytes(bytes=_page_index_bs, byteorder='big')
     if page_index != _page_index:
         raise ValueError("page_index 错误")
-    node = Node(pager, degree, page_index, is_leaf)
+    node = Node(pager, degree, is_leaf, page_index)
     keys_num_bs = buf.read(BYTES_LEN_KEYS)
     keys_num = int.from_bytes(bytes=keys_num_bs, byteorder='big')
     keys = [int.from_bytes(bytes=buf.read(BYTES_KEY), byteorder='big') for _ in range(keys_num)]
@@ -172,6 +183,10 @@ def new_node_from_page(pager: Pager, degree: int, page_index: int) -> Node:
         rows_num = int.from_bytes(bytes=rows_num_bs, byteorder='big')
         rows = [new_row_from_bytes(buf) for _ in range(rows_num)]
         node.rows = rows
+        left_page_index_bs = buf.read(BYTES_PAGE_INDEX)
+        node.left_page_index = int.from_bytes(bytes=left_page_index_bs, byteorder='big')
+        right_page_index_bs = buf.read(BYTES_PAGE_INDEX)
+        node.right_page_index = int.from_bytes(bytes=right_page_index_bs, byteorder='big')
     else:
         page_indices_num_bs = buf.read(BYTES_LEN_PAGE_INDICES)
         page_indices_num = int.from_bytes(bytes=page_indices_num_bs, byteorder='big')
