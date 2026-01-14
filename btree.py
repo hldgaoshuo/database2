@@ -42,6 +42,7 @@ class Node:
                 child = new_node_from_page(self.pager, self.degree, page_index)
                 child.show(count + 1)
         else:
+            print(f'{indent}left:{self.left_page_index} right:{self.right_page_index}')
             print(f'{indent}rows:{self.rows}')
 
     def to_bytes(self):
@@ -55,8 +56,8 @@ class Node:
             r += len(self.rows).to_bytes(length=BYTES_LEN_ROWS, byteorder='big')
             for row in self.rows:
                 r += bytes(row)
-            r += self.left_page_index.to_bytes(length=BYTES_PAGE_INDEX, byteorder='big')
-            r += self.right_page_index.to_bytes(length=BYTES_PAGE_INDEX, byteorder='big')
+            r += self.left_page_index.to_bytes(length=BYTES_PAGE_INDEX, byteorder='big', signed=True)
+            r += self.right_page_index.to_bytes(length=BYTES_PAGE_INDEX, byteorder='big', signed=True)
         else:
             r += len(self.page_indices).to_bytes(length=BYTES_LEN_PAGE_INDICES, byteorder='big')
             for page_index in self.page_indices:
@@ -148,6 +149,9 @@ class Node:
                 new.left_page_index = self.page_index
                 new.right_page_index = right.page_index
                 right.persist()
+            else:
+                self.right_page_index = new.page_index
+                new.left_page_index = self.page_index
         else:
             new.keys = self.keys[self.degree:]
             new.page_indices = self.page_indices[self.degree:]
@@ -184,9 +188,9 @@ def new_node_from_page(pager: Pager, degree: int, page_index: int) -> Node:
         rows = [new_row_from_bytes(buf) for _ in range(rows_num)]
         node.rows = rows
         left_page_index_bs = buf.read(BYTES_PAGE_INDEX)
-        node.left_page_index = int.from_bytes(bytes=left_page_index_bs, byteorder='big')
+        node.left_page_index = int.from_bytes(bytes=left_page_index_bs, byteorder='big', signed=True)
         right_page_index_bs = buf.read(BYTES_PAGE_INDEX)
-        node.right_page_index = int.from_bytes(bytes=right_page_index_bs, byteorder='big')
+        node.right_page_index = int.from_bytes(bytes=right_page_index_bs, byteorder='big', signed=True)
     else:
         page_indices_num_bs = buf.read(BYTES_LEN_PAGE_INDICES)
         page_indices_num = int.from_bytes(bytes=page_indices_num_bs, byteorder='big')
