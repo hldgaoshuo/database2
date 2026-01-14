@@ -95,6 +95,23 @@ class Node:
             else:
                 child.set(key, row)
 
+    def delete(self, key: int) -> int:
+        if self.is_leaf:
+            key_r = self.delete_row(key)
+            self.persist()
+            return key_r
+        else:
+            page_index = self.get_page_index(key)
+            child = new_node_from_page(self.pager, self.degree, page_index)
+            key_r = child.delete(key)
+            if child.is_enough():
+                if key in self.keys and key_r != -1:
+                    self.replace_key(key, key_r)
+                    self.persist()
+                return key_r
+            else:
+                pass
+
     def get_row(self, key: int) -> t.Optional[Row]:
         try:
             i = self.keys.index(key)
@@ -160,6 +177,29 @@ class Node:
         new.persist()
         self.persist()
         return new
+
+    def delete_row(self, key: int) -> int:
+        key_r = -1
+        try:
+            i = self.keys.index(key)
+        except ValueError:
+            return key_r
+        self.keys.pop(i)
+        self.rows.pop(i)
+        try:
+            key_r = self.keys[i]
+        except IndexError:
+            if self.right_page_index != -1:
+                right = new_node_from_page(self.pager, self.degree, self.right_page_index)
+                key_r = right.keys[0]
+        return key_r
+
+    def replace_key(self, key: int, key_r: int):
+        i = self.keys.index(key)
+        self.keys[i] = key_r
+
+    def is_enough(self) -> bool:
+        return len(self.keys) >= self.degree - 1
 
 
 def new_node(pager: Pager, degree: int, is_leaf: bool):
