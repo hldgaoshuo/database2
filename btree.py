@@ -375,13 +375,14 @@ class Tree:
             self.root = new_root
         self.root.set(key, row)
 
-    def delete(self, key: int):
-        self.root.delete(key)
+    def delete(self, key: int) -> int:
+        key_r = self.root.delete(key)
         if self.root.is_empty() and not self.root.is_leaf:
             pi = self.root.page_indices[0]
             new_root = new_node_from_page(self.pager, self.degree, pi)
             self.root = new_root
             # todo 需要更新表的元数据
+        return key_r
 
 
 def new_tree(pager: Pager, degree: int) -> Tree:
