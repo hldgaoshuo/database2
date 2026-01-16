@@ -38,8 +38,8 @@ def test_get():
     ]
     for data in datas:
         tree[data.oid] = data
-        tree.show()
     for data in datas:
+        print()
         print(tree[data.oid])
 
 
@@ -56,9 +56,5 @@ def test_delete():
     ]
     for data in datas:
         tree[data.oid] = data
-        tree.show()
-
     del tree[2]
-
-    for data in datas:
-        print(tree[data.oid])
+    tree.show()

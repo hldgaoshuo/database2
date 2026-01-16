@@ -107,6 +107,7 @@ class Node:
             index = self.get_index(key)
             page_index = self.page_indices[index]
             child = new_node_from_page(self.pager, self.degree, page_index)
+            print(f"delete 1")
             key_r = child.delete(key)
             if child.is_enough():
                 if key in self.keys and key_r != -1:
