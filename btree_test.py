@@ -23,5 +23,42 @@ def test_set():
     for data in datas:
         tree[data.oid] = data
         tree.show()
+
+
+def test_get():
+    pager = Pager("test.db")
+    degree = 2
+    tree = new_tree(pager, degree)
+    datas = [
+        new_row(1, [new_int(1), new_string('hello'), new_bool(True)]),
+        new_row(2, [new_int(2), new_string('world'), new_bool(False)]),
+        new_row(3, [new_int(3), new_string('ok'), new_bool(True)]),
+        new_row(4, [new_int(4), new_string('ok'), new_bool(True)]),
+        new_row(1, [new_int(1), new_string('ok'), new_bool(True)]),
+    ]
+    for data in datas:
+        tree[data.oid] = data
+        tree.show()
+    for data in datas:
+        print(tree[data.oid])
+
+
+def test_delete():
+    pager = Pager("test.db")
+    degree = 2
+    tree = new_tree(pager, degree)
+    datas = [
+        new_row(1, [new_int(1), new_string('hello'), new_bool(True)]),
+        new_row(2, [new_int(2), new_string('world'), new_bool(False)]),
+        new_row(3, [new_int(3), new_string('ok'), new_bool(True)]),
+        new_row(4, [new_int(4), new_string('ok'), new_bool(True)]),
+        new_row(1, [new_int(1), new_string('ok'), new_bool(True)]),
+    ]
+    for data in datas:
+        tree[data.oid] = data
+        tree.show()
+
+    del tree[2]
+
     for data in datas:
         print(tree[data.oid])

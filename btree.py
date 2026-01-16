@@ -33,6 +33,9 @@ class Node:
     def __setitem__(self, key: int, value: Row):
         self.set(key, value)
 
+    def __delitem__(self, key: int):
+        self.delete(key)
+
     def show(self, count: int):
         indent = '---- ' * count
         keys = ','.join([str(k) for k in self.keys])
@@ -101,7 +104,8 @@ class Node:
             self.persist()
             return key_r
         else:
-            page_index = self.get_page_index(key)
+            index = self.get_index(key)
+            page_index = self.page_indices[index]
             child = new_node_from_page(self.pager, self.degree, page_index)
             key_r = child.delete(key)
             if child.is_enough():
@@ -110,7 +114,26 @@ class Node:
                     self.persist()
                 return key_r
             else:
-                pass
+                l_child = None
+                if self.left_page_index != -1:
+                    l_child = new_node_from_page(self.pager, self.degree, self.left_page_index)
+                if self.can_borrow_left_child(index, l_child):
+                    self.borrow_left_child(index, child, l_child)
+                    return key_r
+
+                r_child = None
+                if self.right_page_index != -1:
+                    r_child = new_node_from_page(self.pager, self.degree, self.right_page_index)
+                if self.can_borrow_right_child(index, r_child):
+                    self.borrow_right_child(index, child, r_child)
+                    return key_r
+
+                if index < len(self.page_indices) - 1:
+                    self.merge_right_child(child, r_child, index)
+                    return key_r
+                else:
+                    self.merge_right_child(l_child, child, index)
+                    return key_r
 
     def get_row(self, key: int) -> t.Optional[Row]:
         try:
@@ -201,6 +224,79 @@ class Node:
     def is_enough(self) -> bool:
         return len(self.keys) >= self.degree - 1
 
+    def can_borrow(self):
+        return len(self.keys) >= self.degree
+
+    def can_borrow_left_child(self, index: int, left_child: 'Node'):
+        return index > 0 and left_child is not None and left_child.can_borrow()
+
+    def borrow_left_child(self, index: int, child: 'Node', left_child: 'Node'):
+        if child.is_leaf:
+            _key = left_child.keys.pop(-1)
+            _row = left_child.rows.pop(-1)
+            child.keys.insert(0, _key)
+            child.rows.insert(0, _row)
+        else:
+            _key = self.keys[index - 1]
+            _page_index = left_child.page_indices.pop(-1)
+            child.keys.insert(0, _key)
+            child.page_indices.insert(0, _page_index)
+        if child.is_leaf:
+            _key = child.keys[0]
+            self.keys[index - 1] = _key
+        else:
+            _key = left_child.keys.pop(-1)
+            self.keys[index - 1] = _key
+        self.persist()
+        child.persist()
+        left_child.persist()
+
+    def can_borrow_right_child(self, index: int, right_child: 'Node'):
+        return index < len(self.page_indices) - 1 and right_child is not None and right_child.can_borrow()
+
+    def borrow_right_child(self, index: int, child: 'Node', right_child: 'Node'):
+        if child.is_leaf:
+            _key = right_child.keys.pop(0)
+            _row = right_child.rows.pop(0)
+            child.keys.append(_key)
+            child.rows.append(_row)
+        else:
+            _key = self.keys[index]
+            _page_index = right_child.page_indices.pop(0)
+            child.keys.append(_key)
+            child.page_indices.append(_page_index)
+        if child.is_leaf:
+            _key = right_child.keys[0]
+            self.keys[index] = _key
+        else:
+            _key = right_child.keys.pop(0)
+            self.keys[index] = _key
+        self.persist()
+        child.persist()
+        right_child.persist()
+
+    def merge_right_child(self, left_child: 'Node', right_child: 'Node', index: int):
+        if left_child.is_leaf:
+            left_child.keys.extend(right_child.keys)
+            left_child.rows.extend(right_child.rows)
+            left_child.right_page_index = right_child.right_page_index
+            if left_child.right_page_index != -1:
+                rr_child = new_node_from_page(self.pager, self.degree, left_child.right_page_index)
+                rr_child.left_page_index = left_child.page_index
+                rr_child.persist()
+        else:
+            _key = self.keys.pop(index)
+            left_child.keys.append(_key)
+            left_child.keys.extend(right_child.keys)
+            left_child.page_indices.extend(right_child.page_indices)
+        self.page_indices.pop(index + 1)
+        self.persist()
+        left_child.persist()
+        # todo right 进入 free list
+
+    def is_empty(self) -> bool:
+        return len(self.keys) == 0
+
 
 def new_node(pager: Pager, degree: int, is_leaf: bool):
     page_index = pager.get_page_index()
@@ -253,6 +349,9 @@ class Tree:
     def __setitem__(self, key: int, value: Row):
         self.set(key, value)
 
+    def __delitem__(self, key: int):
+        self.delete(key)
+
     def show(self):
         print()
         self.root.show(0)
@@ -274,6 +373,14 @@ class Tree:
             new_root.persist()
             self.root = new_root
         self.root.set(key, row)
+
+    def delete(self, key: int):
+        self.root.delete(key)
+        if self.root.is_empty() and not self.root.is_leaf:
+            pi = self.root.page_indices[0]
+            new_root = new_node_from_page(self.pager, self.degree, pi)
+            self.root = new_root
+            # todo 需要更新表的元数据
 
 
 def new_tree(pager: Pager, degree: int) -> Tree:
