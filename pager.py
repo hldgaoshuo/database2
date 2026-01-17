@@ -25,3 +25,7 @@ class Pager:
             index = self.page_index
             self.page_index += 1
             return index
+
+
+def new_pager(filename: str) -> Pager:
+    return Pager(filename)
