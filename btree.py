@@ -1,7 +1,7 @@
 import typing as t
 from io import BytesIO
 from row import Row, new_row_from_bytes
-from pager import Pager
+from pager import Pager, NULL_PAGE_INDEX
 
 BYTES_IS_LEAF = 1
 BYTES_PAGE_INDEX = 4
@@ -24,8 +24,8 @@ class Node:
         self.keys: list[int] = []
         self.rows: list[Row] = []
         self.page_indices: list[int] = []
-        self.left_page_index: int = -1
-        self.right_page_index: int = -1
+        self.left_page_index: int = NULL_PAGE_INDEX
+        self.right_page_index: int = NULL_PAGE_INDEX
 
     def __bytes__(self) -> bytes:
         return self.to_bytes()
@@ -110,23 +110,22 @@ class Node:
             index = self.get_index(key)
             page_index = self.page_indices[index]
             child = new_node_from_page(self.pager, self.degree, page_index)
-            print(f"delete 1")
             key_r = child.delete(key)
             if child.is_enough():
-                if key in self.keys and key_r != -1:
+                if key in self.keys and key_r != NULL_PAGE_INDEX:
                     self.replace_key(key, key_r)
                     self.persist()
                 return key_r
             else:
                 l_child = None
-                if self.left_page_index != -1:
+                if self.left_page_index != NULL_PAGE_INDEX:
                     l_child = new_node_from_page(self.pager, self.degree, self.left_page_index)
                 if self.can_borrow_left_child(index, l_child):
                     self.borrow_left_child(index, child, l_child)
                     return key_r
 
                 r_child = None
-                if self.right_page_index != -1:
+                if self.right_page_index != NULL_PAGE_INDEX:
                     r_child = new_node_from_page(self.pager, self.degree, self.right_page_index)
                 if self.can_borrow_right_child(index, r_child):
                     self.borrow_right_child(index, child, r_child)
@@ -186,7 +185,7 @@ class Node:
             new.rows = self.rows[self.degree:]
             self.keys = self.keys[:self.degree]
             self.rows = self.rows[:self.degree]
-            if self.right_page_index != -1:
+            if self.right_page_index != NULL_PAGE_INDEX:
                 right = new_node_from_page(self.pager, self.degree, self.right_page_index)
                 self.right_page_index = new.page_index
                 right.left_page_index = new.page_index
@@ -216,7 +215,7 @@ class Node:
         try:
             key_r = self.keys[i]
         except IndexError:
-            if self.right_page_index != -1:
+            if self.right_page_index != NULL_PAGE_INDEX:
                 right = new_node_from_page(self.pager, self.degree, self.right_page_index)
                 key_r = right.keys[0]
         return key_r
@@ -284,7 +283,7 @@ class Node:
             left_child.keys.extend(right_child.keys)
             left_child.rows.extend(right_child.rows)
             left_child.right_page_index = right_child.right_page_index
-            if left_child.right_page_index != -1:
+            if left_child.right_page_index != NULL_PAGE_INDEX:
                 rr_child = new_node_from_page(self.pager, self.degree, left_child.right_page_index)
                 rr_child.left_page_index = left_child.page_index
                 rr_child.persist()
