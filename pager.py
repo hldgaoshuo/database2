@@ -22,10 +22,16 @@ class Pager:
         offset = self.offset(page_index)
         file_update(self.file, offset, page_bs)
 
+    def set_meta_page_bs(self, page_bs: bytes):
+        self.set_page_bs(0, page_bs)
+
     def get_page_bs(self, page_index: int) -> bytes:
         offset = self.offset(page_index)
         page_bs = file_read(self.file, offset, SIZE_PAGE)
         return page_bs
+
+    def get_meta_page_bs(self) -> bytes:
+        return self.get_page_bs(0)
 
     def get_page_index(self) -> int:
         with self.page_index_lock:
