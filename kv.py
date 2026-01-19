@@ -1,5 +1,5 @@
 from pager import Pager, new_pager
-from btree import Tree, new_tree_from_page
+from btree import Tree, new_tree
 from row import Row
 
 
@@ -7,7 +7,7 @@ class KV:
 
     def __init__(self, path: str, degree: int):
         self.pager: Pager = new_pager(path)
-        self.tree: Tree = new_tree_from_page(self.pager, degree)
+        self.tree: Tree = new_tree(self.pager, degree)
 
     def __setitem__(self, key: int, value: Row):
         self.tree[key] = value

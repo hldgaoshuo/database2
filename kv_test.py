@@ -6,7 +6,7 @@ from value.string import new_string
 
 
 def test_init():
-    kv = new_kv('test.db')
+    new_kv('test.db')
 
 
 def test_set():

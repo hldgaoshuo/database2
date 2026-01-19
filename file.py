@@ -1,9 +1,14 @@
 from io import BufferedRandom
 
 
-def file_open(filename: str) -> BufferedRandom:
-    f = open(filename, 'rb+')
-    return f
+def file_open(filename: str) -> tuple[BufferedRandom, bool]:
+    try:
+        f = open(filename, 'rb+')
+        is_new = False
+    except FileNotFoundError:
+        f = open(filename, 'wb+')
+        is_new = True
+    return f, is_new
 
 
 def file_read(file: BufferedRandom, offset: int, length: int) -> bytes:

@@ -1,17 +1,13 @@
 import typing as t
 from io import BytesIO
 from row import Row, new_row_from_bytes
-from pager import Pager, NULL_PAGE_INDEX
+from pager import BYTES_PAGE_INDEX, NULL_PAGE_INDEX, Pager
 
 BYTES_IS_LEAF = 1
-BYTES_PAGE_INDEX = 4
 BYTES_LEN_KEYS = 4
 BYTES_KEY = 4
 BYTES_LEN_ROWS = 4
 BYTES_LEN_PAGE_INDICES = 4
-BYTES_MAGIC_NUMBER = 2
-
-MAGIC_NUMBER_BS = b'\x95\x27'
 
 
 class Node:
@@ -373,40 +369,26 @@ class Tree:
             child_new = child.split()
             new_root.page_indices.insert(1, child_new.page_index)
             new_root.persist()
+            self.pager.set_root_page_index(new_root.page_index)
             self.root = new_root
         self.root.set(key, row)
 
     def delete(self, key: int) -> int:
         key_r = self.root.delete(key)
         if self.root.is_empty() and not self.root.is_leaf:
-            pi = self.root.page_indices[0]
-            new_root = new_node_from_page(self.pager, self.degree, pi)
+            page_index = self.root.page_indices[0]
+            new_root = new_node_from_page(self.pager, self.degree, page_index)
+            self.pager.set_root_page_index(new_root.page_index)
             self.root = new_root
-            # todo 需要更新表的元数据
         return key_r
 
 
 def new_tree(pager: Pager, degree: int) -> Tree:
-    root = new_node(pager, degree, True)
-    root.persist()
-    tree = Tree(pager, degree, root)
-    return tree
-
-
-def new_tree_from_page(pager: Pager, degree: int) -> Tree:
-    meta_page_bs = pager.get_meta_page_bs()
-    meta = BytesIO(meta_page_bs)
-    magic_number_bs = meta.read(BYTES_MAGIC_NUMBER)
-    if magic_number_bs != MAGIC_NUMBER_BS:
+    if pager.is_new:
         root = new_node(pager, degree, True)
         root.persist()
-        r = MAGIC_NUMBER_BS
-        r += root.page_index.to_bytes(BYTES_PAGE_INDEX, byteorder='big')
-        pager.set_meta_page_bs(r)
         tree = Tree(pager, degree, root)
     else:
-        root_page_index_bs = meta.read(BYTES_PAGE_INDEX)
-        root_page_index = int.from_bytes(root_page_index_bs, byteorder='big')
-        root = new_node_from_page(pager, degree, root_page_index)
+        root = new_node_from_page(pager, degree, pager.root_page_index)
         tree = Tree(pager, degree, root)
     return tree
