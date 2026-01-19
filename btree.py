@@ -9,6 +9,7 @@ BYTES_LEN_KEYS = 4
 BYTES_KEY = 4
 BYTES_LEN_ROWS = 4
 BYTES_LEN_PAGE_INDICES = 4
+BYTES_MAGIC_NUMBER = 2
 
 
 class Node:
@@ -338,11 +339,10 @@ def new_node_from_page(pager: Pager, degree: int, page_index: int) -> Node:
 
 class Tree:
 
-    def __init__(self, pager: Pager, degree: int):
+    def __init__(self, pager: Pager, degree: int, root: Node):
         self.pager: Pager = pager
         self.degree: int = degree
-        self.root: Node = new_node(pager, degree, True)
-        self.root.persist()
+        self.root: Node = root
 
     def __getitem__(self, item: int) -> t.Optional[Row]:
         return self.get(item)
@@ -386,5 +386,26 @@ class Tree:
 
 
 def new_tree(pager: Pager, degree: int) -> Tree:
-    tree = Tree(pager, degree)
+    root = new_node(pager, degree, True)
+    root.persist()
+    tree = Tree(pager, degree, root)
+    return tree
+
+
+def new_tree_from_page(pager: Pager, degree: int) -> Tree:
+    page_bs = pager.get_page_bs(0)
+    buf = BytesIO(page_bs)
+    magic_number_bs = buf.read(BYTES_MAGIC_NUMBER)
+    if magic_number_bs != b'\x95\x27':
+        root = new_node(pager, degree, True)
+        root.persist()
+        r = b'\x95\x27'
+        r += root.page_index.to_bytes(BYTES_PAGE_INDEX, byteorder='big')
+        pager.set_page_bs(0, r)
+        tree = Tree(pager, degree, root)
+    else:
+        root_page_index_bs = buf.read(BYTES_PAGE_INDEX)
+        root_page_index = int.from_bytes(root_page_index_bs, byteorder='big')
+        root = new_node_from_page(pager, degree, root_page_index)
+        tree = Tree(pager, degree, root)
     return tree

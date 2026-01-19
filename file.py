@@ -2,7 +2,7 @@ from io import BufferedRandom
 
 
 def file_open(filename: str) -> BufferedRandom:
-    f = open(filename, 'wb+')
+    f = open(filename, 'rb+')
     return f
 
 
