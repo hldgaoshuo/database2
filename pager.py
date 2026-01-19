@@ -9,7 +9,8 @@ class Pager:
 
     def __init__(self, filename: str):
         self.file = file_open(filename)
-        self.page_index: int = 1  # 第 0 页用于存储元数据
+        self.meta_page_index: int = 0  # 第 0 页用于存储元数据
+        self.page_index: int = 1
         file_size = self.file.tell()
         if file_size != 0:
             self.page_index = file_size // SIZE_PAGE
@@ -23,7 +24,7 @@ class Pager:
         file_update(self.file, offset, page_bs)
 
     def set_meta_page_bs(self, page_bs: bytes):
-        self.set_page_bs(0, page_bs)
+        self.set_page_bs(self.meta_page_index, page_bs)
 
     def get_page_bs(self, page_index: int) -> bytes:
         offset = self.offset(page_index)
@@ -31,7 +32,7 @@ class Pager:
         return page_bs
 
     def get_meta_page_bs(self) -> bytes:
-        return self.get_page_bs(0)
+        return self.get_page_bs(self.meta_page_index)
 
     def get_page_index(self) -> int:
         with self.page_index_lock:
