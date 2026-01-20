@@ -6,7 +6,7 @@ BYTES_INT = 8
 
 class Int(Value):
 
-    def __init__(self, content: int) -> None:
+    def __init__(self, content: int):
         super().__init__(ValueType.INT, content)
 
     def __bytes__(self) -> bytes:

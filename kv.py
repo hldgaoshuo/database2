@@ -5,9 +5,9 @@ from row import Row
 
 class KV:
 
-    def __init__(self, path: str, degree: int):
-        self.pager: Pager = new_pager(path)
-        self.tree: Tree = new_tree(self.pager, degree)
+    def __init__(self, pager: Pager, tree: Tree):
+        self.pager: Pager = pager
+        self.tree: Tree = tree
 
     def __setitem__(self, key: int, value: Row):
         self.tree[key] = value
@@ -20,5 +20,7 @@ class KV:
 
 
 def new_kv(path: str):
+    pager = new_pager(path)
     degree = 2
-    return KV(path, degree)
+    tree = new_tree(pager, degree)
+    return KV(pager, tree)

@@ -6,7 +6,7 @@ BYTES_BOOL = 1
 
 class Bool(Value):
 
-    def __init__(self, content: bool) -> None:
+    def __init__(self, content: bool):
         super().__init__(ValueType.BOOL, content)
 
     def __bytes__(self) -> bytes:

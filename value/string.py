@@ -7,18 +7,15 @@ BYTES_STRING = 10
 
 class STRING(Value):
 
-    def __init__(self, content: str) -> None:
-        self.content_size = len(content)
-        space_num = BYTES_STRING - self.content_size
-        if space_num < 0:
-            raise ValueError("字符串长度超出限制")
-        content = content + ' ' * space_num
+    def __init__(self, content: str):
         super().__init__(ValueType.STRING, content)
 
     def __bytes__(self) -> bytes:
         value_type_row = self.value_type.to_bytes(length=BYTES_VALUE_TYPE, byteorder='big')
-        content_size_row = self.content_size.to_bytes(length=BYTES_STRING_SIZE, byteorder='big')
-        content_row = self.content.encode('utf-8')
+        content_size = len(self.content)
+        content_size_row = content_size.to_bytes(length=BYTES_STRING_SIZE, byteorder='big')
+        content = self.content + ' ' * (BYTES_STRING - content_size)
+        content_row = content.encode('utf-8')
         result = value_type_row + content_size_row + content_row
         return result
 
@@ -27,6 +24,8 @@ class STRING(Value):
 
 
 def new_string(content: str) -> STRING:
+    if len(content) > BYTES_STRING:
+        raise ValueError("字符串长度超出限制")
     return STRING(content)
 
 

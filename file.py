@@ -1,22 +1,18 @@
-from io import BufferedRandom
+import os
 
 
-def file_open(filename: str) -> tuple[BufferedRandom, bool]:
-    try:
-        f = open(filename, 'rb+')
-        is_new = False
-    except FileNotFoundError:
-        f = open(filename, 'wb+')
-        is_new = True
-    return f, is_new
+def file_open(path: str) -> int:
+    fd = os.open(path, os.O_RDWR | os.O_CREAT | os.O_BINARY)
+    return fd
 
 
-def file_read(file: BufferedRandom, offset: int, length: int) -> bytes:
-    file.seek(offset)
-    return file.read(length)
+def file_read(fd: int, offset: int, length: int) -> bytes:
+    os.lseek(fd, offset, os.SEEK_SET)
+    bs = os.read(fd, length)
+    return bs
 
 
-def file_update(file: BufferedRandom, offset: int, data: bytes):
-    file.seek(offset)
-    file.write(data)
-    file.flush()
+def file_update(fd: int, offset: int, data: bytes):
+    os.lseek(fd, offset, os.SEEK_SET)
+    os.write(fd, data)
+    os.fsync(fd)

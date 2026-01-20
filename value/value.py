@@ -12,7 +12,7 @@ class ValueType(IntEnum):
 
 class Value:
 
-    def __init__(self, value_type: ValueType, content: int | str | bool) -> None:
+    def __init__(self, value_type: ValueType, content: int | str | bool):
         self.value_type: ValueType = value_type
         self.content: int | str = content
 
