@@ -12,6 +12,18 @@ BYTES_LEN_PAGE_INDICES = 4
 
 class Node:
 
+    def __bytes__(self):
+        return self.to_bytes()
+
+    def __getitem__(self, item):
+        return self.get(item)
+
+    def __setitem__(self, key, value):
+        self.set(key, value)
+
+    def __delitem__(self, key):
+        self.delete(key)
+
     def __init__(self, pager: Pager, degree: int, is_leaf: bool, page_index: int, left_page_index: int, right_page_index: int):
         self.pager: Pager = pager
         self.degree: int = degree
@@ -23,19 +35,7 @@ class Node:
         self.left_page_index: int = left_page_index
         self.right_page_index: int = right_page_index
 
-    def __bytes__(self) -> bytes:
-        return self.to_bytes()
-
-    def __getitem__(self, item: int) -> t.Optional[Row]:
-        return self.get(item)
-
-    def __setitem__(self, key: int, value: Row):
-        self.set(key, value)
-
-    def __delitem__(self, key: int):
-        self.delete(key)
-
-    def show(self, count: int):
+    def show(self, count: int) -> None:
         indent = '---- ' * count
         keys = ','.join([str(k) for k in self.keys])
         print(f'{indent}key:{keys} page_index:{self.page_index}')
@@ -47,7 +47,7 @@ class Node:
             print(f'{indent}left:{self.left_page_index} right:{self.right_page_index}')
             print(f'{indent}rows:{self.rows}')
 
-    def to_bytes(self):
+    def to_bytes(self) -> bytes:
         r = b''
         r += self.is_leaf.to_bytes(length=BYTES_IS_LEAF, byteorder='big')
         r += self.page_index.to_bytes(length=BYTES_PAGE_INDEX, byteorder='big')
@@ -74,7 +74,7 @@ class Node:
             child = new_node_from_page(self.pager, self.degree, page_index)
             return child.get(key)
 
-    def set(self, key: int, row: Row):
+    def set(self, key: int, row: Row) -> None:
         if self.is_leaf:
             self.set_row(key, row)
             self.persist()
@@ -150,7 +150,7 @@ class Node:
         page_index = self.page_indices[i]
         return page_index
 
-    def set_row(self, key: int, row: Row):
+    def set_row(self, key: int, row: Row) -> None:
         i = len(self.keys) - 1
         while i >= 0 and key < self.keys[i]:
             i = i - 1
@@ -161,7 +161,7 @@ class Node:
             self.keys.insert(i, key)
             self.rows.insert(i, row)
 
-    def persist(self):
+    def persist(self) -> None:
         self.pager.set_page_bs(self.page_index, bytes(self))
 
     def get_index(self, key: int) -> int:
@@ -216,20 +216,20 @@ class Node:
                 key_r = right.keys[0]
         return key_r
 
-    def replace_key(self, key: int, key_r: int):
+    def replace_key(self, key: int, key_r: int) -> None:
         i = self.keys.index(key)
         self.keys[i] = key_r
 
     def is_enough(self) -> bool:
         return len(self.keys) >= self.degree - 1
 
-    def can_borrow(self):
+    def can_borrow(self) -> bool:
         return len(self.keys) >= self.degree
 
-    def can_borrow_left_child(self, index: int, left_child: 'Node'):
+    def can_borrow_left_child(self, index: int, left_child: 'Node') -> bool:
         return index > 0 and left_child is not None and left_child.can_borrow()
 
-    def borrow_left_child(self, index: int, child: 'Node', left_child: 'Node'):
+    def borrow_left_child(self, index: int, child: 'Node', left_child: 'Node') -> None:
         if child.is_leaf:
             _key = left_child.keys.pop(-1)
             _row = left_child.rows.pop(-1)
@@ -250,10 +250,10 @@ class Node:
         child.persist()
         left_child.persist()
 
-    def can_borrow_right_child(self, index: int, right_child: 'Node'):
+    def can_borrow_right_child(self, index: int, right_child: 'Node') -> bool:
         return index < len(self.page_indices) - 1 and right_child is not None and right_child.can_borrow()
 
-    def borrow_right_child(self, index: int, child: 'Node', right_child: 'Node'):
+    def borrow_right_child(self, index: int, child: 'Node', right_child: 'Node') -> None:
         if child.is_leaf:
             _key = right_child.keys.pop(0)
             _row = right_child.rows.pop(0)
@@ -274,7 +274,7 @@ class Node:
         child.persist()
         right_child.persist()
 
-    def merge_right_child(self, left_child: 'Node', right_child: 'Node', index: int):
+    def merge_right_child(self, left_child: 'Node', right_child: 'Node', index: int) -> None:
         if left_child.is_leaf:
             left_child.keys.extend(right_child.keys)
             left_child.rows.extend(right_child.rows)
@@ -297,7 +297,7 @@ class Node:
         return len(self.keys) == 0
 
 
-def new_node(pager: Pager, degree: int, is_leaf: bool):
+def new_node(pager: Pager, degree: int, is_leaf: bool) -> Node:
     page_index = pager.get_page_index()
     node = Node(pager, degree, is_leaf, page_index, NULL_PAGE_INDEX, NULL_PAGE_INDEX)
     return node
@@ -340,28 +340,28 @@ def new_node_from_page(pager: Pager, degree: int, page_index: int) -> Node:
 
 class Tree:
 
+    def __getitem__(self, item):
+        return self.get(item)
+
+    def __setitem__(self, key, value):
+        self.set(key, value)
+
+    def __delitem__(self, key):
+        self.delete(key)
+
     def __init__(self, pager: Pager, degree: int, root: Node):
         self.pager: Pager = pager
         self.degree: int = degree
         self.root: Node = root
 
-    def __getitem__(self, item: int) -> t.Optional[Row]:
-        return self.get(item)
-
-    def __setitem__(self, key: int, value: Row):
-        self.set(key, value)
-
-    def __delitem__(self, key: int):
-        self.delete(key)
-
-    def show(self):
+    def show(self) -> None:
         print()
         self.root.show(0)
 
-    def get(self, key: int):
+    def get(self, key: int) -> t.Optional[Row]:
         return self.root.get(key)
 
-    def set(self, key: int, row: Row):
+    def set(self, key: int, row: Row) -> None:
         if self.root.is_full():
             child = self.root
             new_root = new_node(self.pager, self.degree, False)

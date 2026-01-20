@@ -12,7 +12,7 @@ def file_read(fd: int, offset: int, length: int) -> bytes:
     return bs
 
 
-def file_update(fd: int, offset: int, data: bytes):
+def file_update(fd: int, offset: int, data: bytes) -> None:
     os.lseek(fd, offset, os.SEEK_SET)
     os.write(fd, data)
     os.fsync(fd)

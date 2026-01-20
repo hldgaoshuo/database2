@@ -10,7 +10,7 @@ class STRING(Value):
     def __init__(self, content: str):
         super().__init__(ValueType.STRING, content)
 
-    def __bytes__(self) -> bytes:
+    def to_bytes(self) -> bytes:
         value_type_row = self.value_type.to_bytes(length=BYTES_VALUE_TYPE, byteorder='big')
         content_size = len(self.content)
         content_size_row = content_size.to_bytes(length=BYTES_STRING_SIZE, byteorder='big')
@@ -19,7 +19,7 @@ class STRING(Value):
         result = value_type_row + content_size_row + content_row
         return result
 
-    def __repr__(self):
+    def show(self) -> str:
         return f'STRING({self.content})'
 
 

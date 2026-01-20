@@ -11,11 +11,24 @@ BYTES_OID = 4
 
 class Row:
 
+    def __repr__(self):
+        return self.show()
+
+    def __bytes__(self):
+        return self.to_bytes()
+
+    def __eq__(self, other):
+        return self.is_eq(other)
+
     def __init__(self, oid: int, values: list[Value]):
         self.oid: int = oid
         self.values: list[Value] = values
 
-    def __bytes__(self) -> bytes:
+    def show(self) -> str:
+        r = f'Row(oid={self.oid}, {self.values})'
+        return r
+
+    def to_bytes(self) -> bytes:
         """
         每行除了 values，会多出 5b
         """
@@ -26,17 +39,13 @@ class Row:
         r += b'\0'  # 添加分隔符表示行结束, 使用 NUL 作为行分隔符
         return r
 
-    def __eq__(self, other: 'Row') -> bool:
+    def is_eq(self, other: 'Row') -> bool:
         if len(self.values) != len(other.values):
             return False
         for i, value in enumerate(self.values):
             if value != other.values[i]:
                 return False
         return True
-
-    def __repr__(self):
-        r = f'Row(oid={self.oid}, {self.values})'
-        return r
 
 
 def new_row(oid: int, values: list[Value]) -> Row:

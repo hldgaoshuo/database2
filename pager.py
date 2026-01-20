@@ -25,6 +25,9 @@ def set_page_bs(fd: int, page_index: int, page_bs: bytes):
 
 class Pager:
 
+    def __bytes__(self):
+        return self.to_bytes()
+
     def __init__(self, fd: int, is_new: bool, root_page_index: int, used_page_index: int):
         self.fd: int = fd
         self.is_new: bool = is_new
@@ -37,9 +40,6 @@ class Pager:
 
     def set_page_bs(self, page_index: int, page_bs: bytes):
         set_page_bs(self.fd, page_index, page_bs)
-
-    def __bytes__(self):
-        return self.to_bytes()
 
     def to_bytes(self):
         r = MAGIC_NUMBER_BS

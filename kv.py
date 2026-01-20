@@ -1,3 +1,4 @@
+import typing as t
 from pager import Pager, new_pager
 from btree import Tree, new_tree
 from row import Row
@@ -5,17 +6,26 @@ from row import Row
 
 class KV:
 
+    def __setitem__(self, key, value):
+        self.set(key, value)
+
+    def __getitem__(self, item):
+        return self.get(item)
+
+    def __delitem__(self, key):
+        self.delete(key)
+
     def __init__(self, pager: Pager, tree: Tree):
         self.pager: Pager = pager
         self.tree: Tree = tree
 
-    def __setitem__(self, key: int, value: Row):
+    def set(self, key: int, value: Row) -> None:
         self.tree[key] = value
 
-    def __getitem__(self, key: int) -> Row:
+    def get(self, key: int) -> t.Optional[Row]:
         return self.tree[key]
 
-    def __delitem__(self, key: int):
+    def delete(self, key: int) -> None:
         self.tree.delete(key)
 
 
