@@ -101,5 +101,5 @@ def new_pager(path: str) -> Pager:
         head_page_index = int.from_bytes(head_page_index_bs, byteorder='big')
         tail_page_index_bs = meta.read(BYTES_PAGE_INDEX)
         tail_page_index = int.from_bytes(tail_page_index_bs, byteorder='big')
-    pager = Pager(fd, is_new, root_page_index, used_page_index, head_page_index, tail_page_index)
+    pager = Pager(fd, is_new, used_page_index, root_page_index, head_page_index, tail_page_index)
     return pager

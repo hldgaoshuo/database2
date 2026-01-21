@@ -1,5 +1,7 @@
 import typing as t
 from io import BytesIO
+
+from free_list import FreeListNode
 from row import Row, new_row_from_bytes
 from pager import BYTES_PAGE_INDEX, NULL_PAGE_INDEX, Pager
 
@@ -24,8 +26,9 @@ class BTreeNode:
     def __delitem__(self, key):
         self.delete(key)
 
-    def __init__(self, pager: Pager, degree: int, is_leaf: bool, page_index: int, left_page_index: int, right_page_index: int):
+    def __init__(self, pager: Pager, free_list: FreeListNode, degree: int, is_leaf: bool, page_index: int, left_page_index: int, right_page_index: int):
         self.pager: Pager = pager
+        self.free_list: FreeListNode = free_list
         self.degree: int = degree
         self.is_leaf: bool = is_leaf
         self.page_index: int = page_index
@@ -41,7 +44,7 @@ class BTreeNode:
         print(f'{indent}key:{keys} page_index:{self.page_index}')
         if not self.is_leaf:
             for page_index in self.page_indices:
-                child = new_b_tree_node_from_page(self.pager, self.degree, page_index)
+                child = new_b_tree_node_from_page(self.pager, self.free_list, self.degree, page_index)
                 child.show(count + 1)
         else:
             print(f'{indent}left:{self.left_page_index} right:{self.right_page_index}')
@@ -71,7 +74,7 @@ class BTreeNode:
             return self.get_row(key)
         else:
             page_index = self.get_page_index(key)
-            child = new_b_tree_node_from_page(self.pager, self.degree, page_index)
+            child = new_b_tree_node_from_page(self.pager, self.free_list, self.degree, page_index)
             return child.get(key)
 
     def set(self, key: int, row: Row) -> None:
@@ -81,7 +84,7 @@ class BTreeNode:
         else:
             index = self.get_index(key)
             page_index = self.page_indices[index]
-            child = new_b_tree_node_from_page(self.pager, self.degree, page_index)
+            child = new_b_tree_node_from_page(self.pager, self.free_list, self.degree, page_index)
             if child.is_full():
                 child_new = child.split()
                 if child.is_leaf:
@@ -105,7 +108,7 @@ class BTreeNode:
         else:
             index = self.get_index(key)
             page_index = self.page_indices[index]
-            child = new_b_tree_node_from_page(self.pager, self.degree, page_index)
+            child = new_b_tree_node_from_page(self.pager, self.free_list, self.degree, page_index)
             key_r = child.delete(key)
             if child.is_enough():
                 if key in self.keys and key_r != NULL_PAGE_INDEX:
@@ -115,14 +118,14 @@ class BTreeNode:
             else:
                 l_child = None
                 if self.left_page_index != NULL_PAGE_INDEX:
-                    l_child = new_b_tree_node_from_page(self.pager, self.degree, self.left_page_index)
+                    l_child = new_b_tree_node_from_page(self.pager, self.free_list, self.degree, self.left_page_index)
                 if self.can_borrow_left_child(index, l_child):
                     self.borrow_left_child(index, child, l_child)
                     return key_r
 
                 r_child = None
                 if self.right_page_index != NULL_PAGE_INDEX:
-                    r_child = new_b_tree_node_from_page(self.pager, self.degree, self.right_page_index)
+                    r_child = new_b_tree_node_from_page(self.pager, self.free_list, self.degree, self.right_page_index)
                 if self.can_borrow_right_child(index, r_child):
                     self.borrow_right_child(index, child, r_child)
                     return key_r
@@ -175,14 +178,14 @@ class BTreeNode:
         return len(self.keys) == 2 * self.degree - 1
 
     def split(self) -> 'BTreeNode':
-        new = new_b_tree_node(self.pager, self.degree, self.is_leaf)
+        new = new_b_tree_node(self.pager, self.free_list, self.degree, self.is_leaf)
         if self.is_leaf:
             new.keys = self.keys[self.degree:]
             new.rows = self.rows[self.degree:]
             self.keys = self.keys[:self.degree]
             self.rows = self.rows[:self.degree]
             if self.right_page_index != NULL_PAGE_INDEX:
-                right = new_b_tree_node_from_page(self.pager, self.degree, self.right_page_index)
+                right = new_b_tree_node_from_page(self.pager, self.free_list, self.degree, self.right_page_index)
                 self.right_page_index = new.page_index
                 right.left_page_index = new.page_index
                 new.left_page_index = self.page_index
@@ -212,7 +215,7 @@ class BTreeNode:
             key_r = self.keys[i]
         except IndexError:
             if self.right_page_index != NULL_PAGE_INDEX:
-                right = new_b_tree_node_from_page(self.pager, self.degree, self.right_page_index)
+                right = new_b_tree_node_from_page(self.pager, self.free_list, self.degree, self.right_page_index)
                 key_r = right.keys[0]
         return key_r
 
@@ -280,7 +283,7 @@ class BTreeNode:
             left_child.rows.extend(right_child.rows)
             left_child.right_page_index = right_child.right_page_index
             if left_child.right_page_index != NULL_PAGE_INDEX:
-                rr_child = new_b_tree_node_from_page(self.pager, self.degree, left_child.right_page_index)
+                rr_child = new_b_tree_node_from_page(self.pager, self.free_list, self.degree, left_child.right_page_index)
                 rr_child.left_page_index = left_child.page_index
                 rr_child.persist()
         else:
@@ -297,13 +300,15 @@ class BTreeNode:
         return len(self.keys) == 0
 
 
-def new_b_tree_node(pager: Pager, degree: int, is_leaf: bool) -> BTreeNode:
-    page_index = pager.get_page_index()
-    node = BTreeNode(pager, degree, is_leaf, page_index, NULL_PAGE_INDEX, NULL_PAGE_INDEX)
+def new_b_tree_node(pager: Pager, free_list: FreeListNode, degree: int, is_leaf: bool) -> BTreeNode:
+    page_index = free_list.get_unused_page_index()
+    if page_index == NULL_PAGE_INDEX:
+        page_index = pager.get_page_index()
+    node = BTreeNode(pager, free_list, degree, is_leaf, page_index, NULL_PAGE_INDEX, NULL_PAGE_INDEX)
     return node
 
 
-def new_b_tree_node_from_page(pager: Pager, degree: int, page_index: int) -> BTreeNode:
+def new_b_tree_node_from_page(pager: Pager, free_list: FreeListNode, degree: int, page_index: int) -> BTreeNode:
     page_bs = pager.get_page_bs(page_index)
     buf = BytesIO(page_bs)
     is_leaf_bs = buf.read(BYTES_IS_LEAF)
@@ -331,7 +336,7 @@ def new_b_tree_node_from_page(pager: Pager, degree: int, page_index: int) -> BTr
         page_indices_num_bs = buf.read(BYTES_LEN_PAGE_INDICES)
         page_indices_num = int.from_bytes(bytes=page_indices_num_bs, byteorder='big')
         page_indices = [int.from_bytes(bytes=buf.read(BYTES_PAGE_INDEX), byteorder='big') for _ in range(page_indices_num)]
-    node = BTreeNode(pager, degree, is_leaf, page_index, left_page_index, right_page_index)
+    node = BTreeNode(pager, free_list, degree, is_leaf, page_index, left_page_index, right_page_index)
     node.keys = keys
     node.rows = rows
     node.page_indices = page_indices
@@ -349,8 +354,9 @@ class BTree:
     def __delitem__(self, key):
         self.delete(key)
 
-    def __init__(self, pager: Pager, degree: int, root: BTreeNode):
+    def __init__(self, pager: Pager, free_list: FreeListNode, degree: int, root: BTreeNode):
         self.pager: Pager = pager
+        self.free_list: FreeListNode = free_list
         self.degree: int = degree
         self.root: BTreeNode = root
 
@@ -364,7 +370,7 @@ class BTree:
     def set(self, key: int, row: Row) -> None:
         if self.root.is_full():
             child = self.root
-            new_root = new_b_tree_node(self.pager, self.degree, False)
+            new_root = new_b_tree_node(self.pager, self.free_list, self.degree, False)
             new_root.page_indices = [child.page_index]
             if child.is_leaf:
                 new_root.keys.insert(0, child.keys[child.degree])
@@ -381,18 +387,18 @@ class BTree:
         key_r = self.root.delete(key)
         if self.root.is_empty() and not self.root.is_leaf:
             page_index = self.root.page_indices[0]
-            new_root = new_b_tree_node_from_page(self.pager, self.degree, page_index)
+            new_root = new_b_tree_node_from_page(self.pager, self.free_list, self.degree, page_index)
             self.pager.set_root_page_index(new_root.page_index)
             self.root = new_root
         return key_r
 
 
-def new_b_tree(pager: Pager, degree: int) -> BTree:
+def new_b_tree(pager: Pager, free_list: FreeListNode, degree: int) -> BTree:
     if pager.is_new:
-        root = new_b_tree_node(pager, degree, True)
+        root = new_b_tree_node(pager, free_list, degree, True)
         root.persist()
-        tree = BTree(pager, degree, root)
+        tree = BTree(pager, free_list, degree, root)
     else:
-        root = new_b_tree_node_from_page(pager, degree, pager.root_page_index)
-        tree = BTree(pager, degree, root)
+        root = new_b_tree_node_from_page(pager, free_list, degree, pager.root_page_index)
+        tree = BTree(pager, free_list, degree, root)
     return tree
