@@ -1,4 +1,4 @@
-from io import BytesIO, BufferedRandom
+from io import BytesIO
 from file import file_open, file_read, file_update
 
 BYTES_PAGE = 4096

@@ -7,7 +7,7 @@ BYTES_UNUSED = 4
 NUM_PAGE_INDICES = 2
 
 
-class Node:
+class FreeListNode:
 
     def __bytes__(self):
         return self.to_bytes()
@@ -34,7 +34,9 @@ class Node:
 
     def get_unused_page_index(self) -> int:
         if self.have_unused():
-            return self.page_indices[self.unused]
+            result = self.page_indices[self.unused]
+            self.unused += 1
+            return result
 
         # all used
         if self.next_page_index == NULL_PAGE_INDEX:
@@ -42,7 +44,7 @@ class Node:
 
         # all used
         # have next
-        next_ = new_node_from_page(self.pager, self.next_page_index)
+        next_ = new_free_list_node_from_page(self.pager, self.next_page_index)
         unused_page_index = next_.get_unused_page_index()
         return unused_page_index
 
@@ -56,16 +58,16 @@ class Node:
             return False
 
         if self.next_page_index == NULL_PAGE_INDEX:
-            next_ = new_node(self.pager)
+            next_ = new_free_list_node(self.pager)
             self.next_page_index = next_.page_index
             self.persist()
         else:
-            next_ = new_node_from_page(self.pager, self.next_page_index)
+            next_ = new_free_list_node_from_page(self.pager, self.next_page_index)
         is_split = next_.set_unused_page_index(page_index)
 
         # full
         if not is_split and not self.have_unused():
-            tail = new_node_from_page(self.pager, self.pager.tail_page_index)
+            tail = new_free_list_node_from_page(self.pager, self.pager.tail_page_index)
             tail.set_unused_page_index(self.page_index)
             self.pager.set_head_page_index(next_.page_index)
             if self.pager.tail_page_index == self.page_index:
@@ -80,13 +82,13 @@ class Node:
         return len(self.page_indices) >= NUM_PAGE_INDICES
 
 
-def new_node(pager: Pager) -> Node:
+def new_free_list_node(pager: Pager) -> FreeListNode:
     page_index = pager.get_page_index()
-    node = Node(pager, page_index, NULL_PAGE_INDEX)
+    node = FreeListNode(pager, page_index, NULL_PAGE_INDEX)
     return node
 
 
-def new_node_from_page(pager: Pager, page_index: int) -> Node:
+def new_free_list_node_from_page(pager: Pager, page_index: int) -> FreeListNode:
     page_bs = pager.get_page_bs(page_index)
     buf = BytesIO(page_bs)
     _page_index_bs = buf.read(BYTES_PAGE_INDEX)
@@ -100,16 +102,16 @@ def new_node_from_page(pager: Pager, page_index: int) -> Node:
     page_indices = [int.from_bytes(bytes=buf.read(BYTES_PAGE_INDEX)) for _ in range(num)]
     unused_bs = buf.read(BYTES_UNUSED)
     unused = int.from_bytes(bytes=unused_bs, byteorder='big')
-    node = Node(pager, page_index, next_page_index)
+    node = FreeListNode(pager, page_index, next_page_index)
     node.page_indices = page_indices
     node.unused = unused
     return node
 
 
-def new_list(pager: Pager) -> Node:
+def new_free_list(pager: Pager) -> FreeListNode:
     if pager.is_new:
-        head = new_node(pager)
+        head = new_free_list_node(pager)
         head.persist()
     else:
-        head = new_node_from_page(pager, pager.tail_page_index)
+        head = new_free_list_node_from_page(pager, pager.tail_page_index)
     return head
