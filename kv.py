@@ -1,6 +1,7 @@
 import typing as t
 from pager import Pager, new_pager
 from btree import Tree, new_tree
+from free_list import Node, new_list
 from row import Row
 
 
@@ -15,9 +16,10 @@ class KV:
     def __delitem__(self, key):
         self.delete(key)
 
-    def __init__(self, pager: Pager, tree: Tree):
+    def __init__(self, pager: Pager, tree: Tree, list_: Node):
         self.pager: Pager = pager
         self.tree: Tree = tree
+        self.list_: Node = list_
 
     def set(self, key: int, value: Row) -> None:
         self.tree[key] = value
@@ -33,4 +35,5 @@ def new_kv(path: str):
     pager = new_pager(path)
     degree = 2
     tree = new_tree(pager, degree)
-    return KV(pager, tree)
+    list_ = new_list(pager)
+    return KV(pager, tree, list_)
