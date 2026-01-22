@@ -8,3 +8,5 @@ def test_set():
     list_.set_unused_page_index(1)
     list_.set_unused_page_index(2)
     list_.set_unused_page_index(3)
+    list_.set_unused_page_index(4)
+    list_.set_unused_page_index(5)

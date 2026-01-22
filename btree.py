@@ -397,6 +397,7 @@ def new_b_tree(pager: Pager, free_list: FreeListNode, degree: int) -> BTree:
     if pager.is_new:
         root = new_b_tree_node(pager, free_list, degree, True)
         root.persist()
+        pager.set_root_page_index(root.page_index)
         tree = BTree(pager, free_list, degree, root)
     else:
         root = new_b_tree_node_from_page(pager, free_list, degree, pager.root_page_index)

@@ -44,18 +44,17 @@ class Pager:
 
     def to_bytes(self) -> bytes:
         r = MAGIC_NUMBER_BS
-        r += self.used_page_index.to_bytes(length=BYTES_PAGE_INDEX, byteorder='big')
-        r += self.root_page_index.to_bytes(length=BYTES_PAGE_INDEX, byteorder='big')
-        r += self.head_page_index.to_bytes(length=BYTES_PAGE_INDEX, byteorder='big')
-        r += self.tail_page_index.to_bytes(length=BYTES_PAGE_INDEX, byteorder='big')
+        r += self.used_page_index.to_bytes(length=BYTES_PAGE_INDEX, byteorder='big', signed=True)
+        r += self.root_page_index.to_bytes(length=BYTES_PAGE_INDEX, byteorder='big', signed=True)
+        r += self.head_page_index.to_bytes(length=BYTES_PAGE_INDEX, byteorder='big', signed=True)
+        r += self.tail_page_index.to_bytes(length=BYTES_PAGE_INDEX, byteorder='big', signed=True)
         return r
 
     def get_page_index(self) -> int:
-        result = self.used_page_index
         self.used_page_index += 1
         meta_bs = bytes(self)
         self.set_page_bs(META_PAGE_INDEX, meta_bs)
-        return result
+        return self.used_page_index
 
     def set_root_page_index(self, root_page_index: int) -> None:
         self.root_page_index = root_page_index
@@ -80,27 +79,25 @@ def new_pager(path: str) -> Pager:
     magic_number_bs = meta.read(BYTES_MAGIC_NUMBER)
     is_new = False
     used_page_index = META_PAGE_INDEX
-    used_page_index += 1
-    root_page_index = used_page_index
-    used_page_index += 1
-    head_page_index = used_page_index
-    tail_page_index = used_page_index
+    root_page_index = NULL_PAGE_INDEX
+    head_page_index = NULL_PAGE_INDEX
+    tail_page_index = NULL_PAGE_INDEX
     if magic_number_bs != MAGIC_NUMBER_BS:
         is_new = True
         r = MAGIC_NUMBER_BS
-        r += used_page_index.to_bytes(length=BYTES_PAGE_INDEX, byteorder='big')
-        r += root_page_index.to_bytes(length=BYTES_PAGE_INDEX, byteorder='big')
-        r += head_page_index.to_bytes(length=BYTES_PAGE_INDEX, byteorder='big')
-        r += tail_page_index.to_bytes(length=BYTES_PAGE_INDEX, byteorder='big')
+        r += used_page_index.to_bytes(length=BYTES_PAGE_INDEX, byteorder='big', signed=True)
+        r += root_page_index.to_bytes(length=BYTES_PAGE_INDEX, byteorder='big', signed=True)
+        r += head_page_index.to_bytes(length=BYTES_PAGE_INDEX, byteorder='big', signed=True)
+        r += tail_page_index.to_bytes(length=BYTES_PAGE_INDEX, byteorder='big', signed=True)
         set_page_bs(fd, META_PAGE_INDEX, r)
     else:
         used_page_index_bs = meta.read(BYTES_PAGE_INDEX)
-        used_page_index = int.from_bytes(used_page_index_bs, byteorder='big')
+        used_page_index = int.from_bytes(used_page_index_bs, byteorder='big', signed=True)
         root_page_index_bs = meta.read(BYTES_PAGE_INDEX)
-        root_page_index = int.from_bytes(root_page_index_bs, byteorder='big')
+        root_page_index = int.from_bytes(root_page_index_bs, byteorder='big', signed=True)
         head_page_index_bs = meta.read(BYTES_PAGE_INDEX)
-        head_page_index = int.from_bytes(head_page_index_bs, byteorder='big')
+        head_page_index = int.from_bytes(head_page_index_bs, byteorder='big', signed=True)
         tail_page_index_bs = meta.read(BYTES_PAGE_INDEX)
-        tail_page_index = int.from_bytes(tail_page_index_bs, byteorder='big')
+        tail_page_index = int.from_bytes(tail_page_index_bs, byteorder='big', signed=True)
     pager = Pager(fd, is_new, used_page_index, root_page_index, head_page_index, tail_page_index)
     return pager

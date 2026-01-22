@@ -113,6 +113,8 @@ def new_free_list_node_from_page(pager: Pager, page_index: int) -> FreeListNode:
 def new_free_list(pager: Pager) -> FreeListNode:
     if pager.is_new:
         head = new_free_list_node(pager)
+        pager.set_head_page_index(head.page_index)
+        pager.set_tail_page_index(head.page_index)
     else:
         head = new_free_list_node_from_page(pager, pager.tail_page_index)
     return head
