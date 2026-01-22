@@ -39,43 +39,15 @@ class FreeListNode:
             self.persist()
             return result
 
-        # all used
         if self.next_page_index == NULL_PAGE_INDEX:
             return NULL_PAGE_INDEX
 
-        # all used
-        # have next
         next_ = new_free_list_node_from_page(self.pager, self.next_page_index)
-        unused_page_index = next_.get_unused_page_index()
-        return unused_page_index
+        result = next_.get_unused_page_index()
+        return result
 
-    def set_unused_page_index(self, page_index: int) -> bool:
-        """
-        返回链表是否已完成截断
-        """
-        if not self.is_full():
-            self.page_indices.append(page_index)
-            self.persist()
-            return False
-
-        if self.next_page_index == NULL_PAGE_INDEX:
-            next_ = new_free_list_node(self.pager)
-            self.pager.set_tail_page_index(next_.page_index)
-            self.next_page_index = next_.page_index
-            self.persist()
-        else:
-            next_ = new_free_list_node_from_page(self.pager, self.next_page_index)
-        is_split = next_.set_unused_page_index(page_index)
-
-        # full
-        if not is_split and not self.have_unused():
-            tail = new_free_list_node_from_page(self.pager, self.pager.tail_page_index)
-            tail.set_unused_page_index(self.page_index)
-            self.pager.set_head_page_index(next_.page_index)
-            if self.pager.tail_page_index == self.page_index:
-                self.pager.set_tail_page_index(next_.page_index)
-            is_split = True
-        return is_split
+    def set_unused_page_index(self, page_index: int) -> None:
+        self.page_indices.append(page_index)
 
     def have_unused(self) -> bool:
         return self.unused < len(self.page_indices)
@@ -87,7 +59,6 @@ class FreeListNode:
 def new_free_list_node(pager: Pager) -> FreeListNode:
     page_index = pager.get_page_index()
     node = FreeListNode(pager, page_index, NULL_PAGE_INDEX)
-    node.persist()
     return node
 
 
@@ -111,11 +82,51 @@ def new_free_list_node_from_page(pager: Pager, page_index: int) -> FreeListNode:
     return node
 
 
-def new_free_list(pager: Pager) -> FreeListNode:
+class FreeList:
+
+    def __init__(self, pager: Pager, head: FreeListNode, tail: FreeListNode):
+        self.pager: Pager = pager
+        self.head: FreeListNode = head
+        self.tail: FreeListNode = tail
+
+    def get_unused_page_index(self) -> int:
+        # if next_.is_full() and not next_.have_unused():
+        #     self.set_unused_page_index(next_.page_index)
+        #     if not is_split:
+        #         self.pager.set_head_page_index(next_.page_index)
+        #         if self.pager.tail_page_index == next_.page_index:
+        #             self.pager.set_tail_page_index(next_.page_index)
+        #         is_split = True
+
+        result = self.head.get_unused_page_index()
+        return result
+
+    def set_unused_page_index(self, page_index: int) -> None:
+        if not self.tail.is_full():
+            self.tail.set_unused_page_index(page_index)
+            self.tail.persist()
+            return
+
+        # tail is full
+        new_tail = new_free_list_node(self.pager)
+        new_tail.set_unused_page_index(page_index)
+        new_tail.persist()
+        self.tail.next_page_index = new_tail.page_index
+        self.tail.persist()
+        self.tail = new_tail
+        self.pager.set_tail_page_index(new_tail.page_index)
+        return
+
+
+def new_free_list(pager: Pager) -> FreeList:
     if pager.is_new:
         head = new_free_list_node(pager)
+        head.persist()
         pager.set_head_page_index(head.page_index)
         pager.set_tail_page_index(head.page_index)
+        list_ = FreeList(pager, head, head)
     else:
-        head = new_free_list_node_from_page(pager, pager.tail_page_index)
-    return head
+        head = new_free_list_node_from_page(pager, pager.head_page_index)
+        tail = new_free_list_node_from_page(pager, pager.tail_page_index)
+        list_ = FreeList(pager, head, tail)
+    return list_
