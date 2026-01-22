@@ -7,3 +7,4 @@ def test_set():
     list_ = new_free_list(pager)
     list_.set_unused_page_index(1)
     list_.set_unused_page_index(2)
+    list_.set_unused_page_index(3)

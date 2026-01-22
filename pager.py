@@ -51,10 +51,11 @@ class Pager:
         return r
 
     def get_page_index(self) -> int:
+        result = self.used_page_index
         self.used_page_index += 1
         meta_bs = bytes(self)
         self.set_page_bs(META_PAGE_INDEX, meta_bs)
-        return self.used_page_index
+        return result
 
     def set_root_page_index(self, root_page_index: int) -> None:
         self.root_page_index = root_page_index

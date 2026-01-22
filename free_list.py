@@ -59,6 +59,7 @@ class FreeListNode:
 
         if self.next_page_index == NULL_PAGE_INDEX:
             next_ = new_free_list_node(self.pager)
+            self.pager.set_tail_page_index(next_.page_index)
             self.next_page_index = next_.page_index
             self.persist()
         else:
@@ -85,6 +86,7 @@ class FreeListNode:
 def new_free_list_node(pager: Pager) -> FreeListNode:
     page_index = pager.get_page_index()
     node = FreeListNode(pager, page_index, NULL_PAGE_INDEX)
+    node.persist()
     return node
 
 
@@ -111,7 +113,6 @@ def new_free_list_node_from_page(pager: Pager, page_index: int) -> FreeListNode:
 def new_free_list(pager: Pager) -> FreeListNode:
     if pager.is_new:
         head = new_free_list_node(pager)
-        head.persist()
     else:
         head = new_free_list_node_from_page(pager, pager.tail_page_index)
     return head
