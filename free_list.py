@@ -89,6 +89,16 @@ class FreeList:
         self.head: FreeListNode = head
         self.tail: FreeListNode = tail
 
+    def zip(self):
+        node = self.head
+        while node.is_full() and not node.have_unused():
+            self.set_unused_page_index(node.page_index)
+            if node.next_page_index == NULL_PAGE_INDEX:
+                break
+            node = new_free_list_node_from_page(self.pager, node.next_page_index)
+            self.head = node
+            self.pager.set_head_page_index(node.page_index)
+
     def get_unused_page_index(self) -> int:
         # if next_.is_full() and not next_.have_unused():
         #     self.set_unused_page_index(next_.page_index)
