@@ -36,6 +36,7 @@ class FreeListNode:
         if self.have_unused():
             result = self.page_indices[self.unused]
             self.unused += 1
+            self.persist()
             return result
 
         # all used
