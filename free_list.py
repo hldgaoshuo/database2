@@ -98,6 +98,15 @@ class FreeList:
         self.head: FreeListNode = head
         self.tail: FreeListNode = tail
 
+    def get(self) -> int:
+        page_index = self.get_unused_page_index()
+        if page_index == NULL_PAGE_INDEX:
+            page_index = self.pager.get_page_index()
+        return page_index
+
+    def set(self, page_index: int) -> None:
+        self.set_unused_page_index(page_index)
+
     def zip(self) -> None:
         """
         单开一个线程处理

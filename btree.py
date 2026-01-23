@@ -294,16 +294,14 @@ class BTreeNode:
         self.page_indices.pop(index + 1)
         self.persist()
         left_child.persist()
-        self.free_list.set_unused_page_index(right_child.page_index)
+        self.free_list.set(right_child.page_index)
 
     def is_empty(self) -> bool:
         return len(self.keys) == 0
 
 
 def new_b_tree_node(pager: Pager, free_list: FreeList, degree: int, is_leaf: bool) -> BTreeNode:
-    page_index = free_list.get_unused_page_index()
-    if page_index == NULL_PAGE_INDEX:
-        page_index = pager.get_page_index()
+    page_index = free_list.get()
     node = BTreeNode(pager, free_list, degree, is_leaf, page_index, NULL_PAGE_INDEX, NULL_PAGE_INDEX)
     return node
 
