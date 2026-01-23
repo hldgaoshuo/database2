@@ -1,7 +1,7 @@
 import typing as t
 from io import BytesIO
 
-from free_list import FreeListNode
+from free_list import FreeList
 from row import Row, new_row_from_bytes
 from pager import BYTES_PAGE_INDEX, NULL_PAGE_INDEX, Pager
 
@@ -26,9 +26,9 @@ class BTreeNode:
     def __delitem__(self, key):
         self.delete(key)
 
-    def __init__(self, pager: Pager, free_list: FreeListNode, degree: int, is_leaf: bool, page_index: int, left_page_index: int, right_page_index: int):
+    def __init__(self, pager: Pager, free_list: FreeList, degree: int, is_leaf: bool, page_index: int, left_page_index: int, right_page_index: int):
         self.pager: Pager = pager
-        self.free_list: FreeListNode = free_list
+        self.free_list: FreeList = free_list
         self.degree: int = degree
         self.is_leaf: bool = is_leaf
         self.page_index: int = page_index
@@ -294,13 +294,13 @@ class BTreeNode:
         self.page_indices.pop(index + 1)
         self.persist()
         left_child.persist()
-        # todo right 进入 free list
+        self.free_list.set_unused_page_index(right_child.page_index)
 
     def is_empty(self) -> bool:
         return len(self.keys) == 0
 
 
-def new_b_tree_node(pager: Pager, free_list: FreeListNode, degree: int, is_leaf: bool) -> BTreeNode:
+def new_b_tree_node(pager: Pager, free_list: FreeList, degree: int, is_leaf: bool) -> BTreeNode:
     page_index = free_list.get_unused_page_index()
     if page_index == NULL_PAGE_INDEX:
         page_index = pager.get_page_index()
@@ -308,7 +308,7 @@ def new_b_tree_node(pager: Pager, free_list: FreeListNode, degree: int, is_leaf:
     return node
 
 
-def new_b_tree_node_from_page(pager: Pager, free_list: FreeListNode, degree: int, page_index: int) -> BTreeNode:
+def new_b_tree_node_from_page(pager: Pager, free_list: FreeList, degree: int, page_index: int) -> BTreeNode:
     page_bs = pager.get_page_bs(page_index)
     buf = BytesIO(page_bs)
     is_leaf_bs = buf.read(BYTES_IS_LEAF)
@@ -354,9 +354,9 @@ class BTree:
     def __delitem__(self, key):
         self.delete(key)
 
-    def __init__(self, pager: Pager, free_list: FreeListNode, degree: int, root: BTreeNode):
+    def __init__(self, pager: Pager, free_list: FreeList, degree: int, root: BTreeNode):
         self.pager: Pager = pager
-        self.free_list: FreeListNode = free_list
+        self.free_list: FreeList = free_list
         self.degree: int = degree
         self.root: BTreeNode = root
 
@@ -393,7 +393,7 @@ class BTree:
         return key_r
 
 
-def new_b_tree(pager: Pager, free_list: FreeListNode, degree: int) -> BTree:
+def new_b_tree(pager: Pager, free_list: FreeList, degree: int) -> BTree:
     if pager.is_new:
         root = new_b_tree_node(pager, free_list, degree, True)
         root.persist()

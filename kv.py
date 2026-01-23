@@ -1,7 +1,7 @@
 import typing as t
 from pager import Pager, new_pager
 from btree import BTree, new_b_tree
-from free_list import FreeListNode, new_free_list
+from free_list import FreeList, new_free_list
 from row import Row
 
 
@@ -16,9 +16,9 @@ class KV:
     def __delitem__(self, key):
         self.delete(key)
 
-    def __init__(self, pager: Pager, list_: FreeListNode, tree: BTree):
+    def __init__(self, pager: Pager, list_: FreeList, tree: BTree):
         self.pager: Pager = pager
-        self.list_: FreeListNode = list_
+        self.list_: FreeList = list_
         self.tree: BTree = tree
 
     def set(self, key: int, value: Row) -> None:
