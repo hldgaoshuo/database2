@@ -5,7 +5,7 @@ BYTES_STRING_SIZE = 1
 BYTES_STRING = 10
 
 
-class STRING(Value):
+class String(Value):
 
     def __init__(self, content: str):
         super().__init__(ValueType.STRING, content)
@@ -23,16 +23,16 @@ class STRING(Value):
         return f'STRING({self.content})'
 
 
-def new_string(content: str) -> STRING:
+def new_string(content: str) -> String:
     if len(content) > BYTES_STRING:
         raise ValueError("字符串长度超出限制")
-    return STRING(content)
+    return String(content)
 
 
-def new_string_from_bytes(buf: BytesIO) -> STRING:
+def new_string_from_bytes(buf: BytesIO) -> String:
     content_size_bs = buf.read(BYTES_STRING_SIZE)
     content_size = int.from_bytes(content_size_bs, byteorder='big')
     content_bs = buf.read(BYTES_STRING)
     content = content_bs.decode('utf-8')
     content = content[:content_size]
-    return STRING(content)
+    return String(content)

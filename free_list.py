@@ -26,7 +26,7 @@ class FreeListNode:
     def show(self) -> str:
         return f'FreeListNode[page_index({self.page_index}), next_page_index({self.next_page_index}), page_indices({self.page_indices}), unused({self.unused})]'
 
-    def to_bytes(self):
+    def to_bytes(self) -> bytes:
         r = b''
         r += self.page_index.to_bytes(length=BYTES_PAGE_INDEX, byteorder='big')
         r += self.next_page_index.to_bytes(length=BYTES_PAGE_INDEX, byteorder='big', signed=True)

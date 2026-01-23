@@ -377,7 +377,7 @@ class BTree:
             child_new = child.split()
             new_root.page_indices.insert(1, child_new.page_index)
             new_root.persist()
-            self.pager.set_table_page_index(new_root.page_index)
+            self.pager.set_table_head(new_root.page_index)
             self.root = new_root
         self.root.set(key, row)
 
@@ -386,7 +386,7 @@ class BTree:
         if self.root.is_empty() and not self.root.is_leaf:
             page_index = self.root.page_indices[0]
             new_root = new_b_tree_node_from_page(self.pager, self.free_list, self.degree, page_index)
-            self.pager.set_table_page_index(new_root.page_index)
+            self.pager.set_table_head(new_root.page_index)
             self.root = new_root
         return key_r
 
@@ -395,9 +395,9 @@ def new_b_tree(pager: Pager, free_list: FreeList, degree: int) -> BTree:
     if pager.is_new:
         root = new_b_tree_node(pager, free_list, degree, True)
         root.persist()
-        pager.set_table_page_index(root.page_index)
+        pager.set_table_head(root.page_index)
         tree = BTree(pager, free_list, degree, root)
     else:
-        root = new_b_tree_node_from_page(pager, free_list, degree, pager.table_page_index)
+        root = new_b_tree_node_from_page(pager, free_list, degree, pager.table_head_page_index)
         tree = BTree(pager, free_list, degree, root)
     return tree
