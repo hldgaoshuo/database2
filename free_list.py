@@ -1,3 +1,4 @@
+import typing as t
 from io import BytesIO
 from pager import BYTES_PAGE_INDEX, NULL_PAGE_INDEX, Pager
 
@@ -9,6 +10,9 @@ NUM_PAGE_INDICES = 2
 
 class FreeListNode:
 
+    def __repr__(self):
+        return self.show()
+
     def __bytes__(self):
         return self.to_bytes()
 
@@ -18,6 +22,9 @@ class FreeListNode:
         self.next_page_index: int = next_page_index
         self.page_indices: list[int] = []
         self.unused: int = 0
+
+    def show(self) -> str:
+        return f'FreeListNode[page_index({self.page_index}), next_page_index({self.next_page_index}), page_indices({self.page_indices}), unused({self.unused})]'
 
     def to_bytes(self):
         r = b''
@@ -32,7 +39,7 @@ class FreeListNode:
     def persist(self) -> None:
         self.pager.set_page_bs(self.page_index, bytes(self))
 
-    def get_unused_page_index(self) -> int:
+    def get_unused_page_index(self, tail: 'FreeListNode') -> int:
         if self.have_unused():
             result = self.page_indices[self.unused]
             self.unused += 1
@@ -42,8 +49,8 @@ class FreeListNode:
         if self.next_page_index == NULL_PAGE_INDEX:
             return NULL_PAGE_INDEX
 
-        next_ = new_free_list_node_from_page(self.pager, self.next_page_index)
-        result = next_.get_unused_page_index()
+        next_ = new_free_list_node_from_page(self.pager, self.next_page_index, tail)
+        result = next_.get_unused_page_index(tail)
         return result
 
     def set_unused_page_index(self, page_index: int) -> None:
@@ -62,7 +69,9 @@ def new_free_list_node(pager: Pager) -> FreeListNode:
     return node
 
 
-def new_free_list_node_from_page(pager: Pager, page_index: int) -> FreeListNode:
+def new_free_list_node_from_page(pager: Pager, page_index: int, tail: t.Optional[FreeListNode]) -> FreeListNode:
+    if tail is not None and page_index == tail.page_index:
+        return tail
     page_bs = pager.get_page_bs(page_index)
     buf = BytesIO(page_bs)
     _page_index_bs = buf.read(BYTES_PAGE_INDEX)
@@ -89,26 +98,21 @@ class FreeList:
         self.head: FreeListNode = head
         self.tail: FreeListNode = tail
 
-    def zip(self):
+    def zip(self) -> None:
+        """
+        单开一个线程处理
+        """
         node = self.head
         while node.is_full() and not node.have_unused():
             self.set_unused_page_index(node.page_index)
             if node.next_page_index == NULL_PAGE_INDEX:
                 break
-            node = new_free_list_node_from_page(self.pager, node.next_page_index)
+            node = new_free_list_node_from_page(self.pager, node.next_page_index, self.tail)
             self.head = node
             self.pager.set_head_page_index(node.page_index)
 
     def get_unused_page_index(self) -> int:
-        # if next_.is_full() and not next_.have_unused():
-        #     self.set_unused_page_index(next_.page_index)
-        #     if not is_split:
-        #         self.pager.set_head_page_index(next_.page_index)
-        #         if self.pager.tail_page_index == next_.page_index:
-        #             self.pager.set_tail_page_index(next_.page_index)
-        #         is_split = True
-
-        result = self.head.get_unused_page_index()
+        result = self.head.get_unused_page_index(self.tail)
         return result
 
     def set_unused_page_index(self, page_index: int) -> None:
@@ -136,7 +140,7 @@ def new_free_list(pager: Pager) -> FreeList:
         pager.set_tail_page_index(head.page_index)
         list_ = FreeList(pager, head, head)
     else:
-        head = new_free_list_node_from_page(pager, pager.head_page_index)
-        tail = new_free_list_node_from_page(pager, pager.tail_page_index)
+        tail = new_free_list_node_from_page(pager, pager.tail_page_index, None)
+        head = new_free_list_node_from_page(pager, pager.head_page_index, tail)
         list_ = FreeList(pager, head, tail)
     return list_
