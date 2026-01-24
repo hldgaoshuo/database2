@@ -31,9 +31,7 @@ class KV:
         self.tree.delete(key)
 
 
-def new_kv(path: str):
-    pager = new_pager(path)
-    list_ = new_free_list(pager)
+def new_kv(pager: Pager, list_: FreeList):
     degree = 2
     tree = new_b_tree(pager, list_, degree)
     return KV(pager, list_, tree)

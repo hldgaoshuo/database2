@@ -1,5 +1,5 @@
 from io import BytesIO
-from pager import BYTES_PAGE_INDEX, Pager, new_pager
+from pager import NULL_PAGE_INDEX, BYTES_PAGE_INDEX, Pager
 from value.value import ValueType
 from value.string import String, new_string_from_bytes
 
@@ -67,6 +67,12 @@ class DatabasePage:
         return r
 
 
+def new_database_page(pager: Pager) -> DatabasePage:
+    page_index = pager.get_page_index()
+    page = DatabasePage(pager, page_index, NULL_PAGE_INDEX)
+    return page
+
+
 def new_database_page_from_page(pager: Pager, page_index: int) -> DatabasePage:
     bs = pager.get_page_bs(page_index)
     buf = BytesIO(bs)
@@ -94,17 +100,24 @@ class Database:
 
 
 def new_database(pager: Pager) -> Database:
-    head = new_database_page_from_page(pager, pager.table_head_page_index)
-    tail = new_database_page_from_page(pager, pager.table_tail_page_index)
+    if pager.is_new:
+        head = new_database_page(pager)
+        tail = new_database_page(pager)
+        pager.set_table_head(head.page_index)
+        pager.set_table_tail(tail.page_index, 0)
+        database = Database(pager, head, tail)
+    else:
+        head = new_database_page_from_page(pager, pager.table_head_page_index)
+        tail = new_database_page_from_page(pager, pager.table_tail_page_index)
 
-    tables = []
-    node = head
-    while True:
-        tables.extend(node.tables)
-        if node.page_index == tail.page_index:
-            break
-        node = new_database_page_from_page(pager, node.next_page_index)
+        tables = {}
+        node = head
+        while True:
+            tables.update({table.name.content: table for table in node.tables})
+            if node.page_index == tail.page_index:
+                break
+            node = new_database_page_from_page(pager, node.next_page_index)
 
-    database = Database(pager, head, tail)
-    database.tables = {table.name.content: table for table in tables}
+        database = Database(pager, head, tail)
+        database.tables = tables
     return database

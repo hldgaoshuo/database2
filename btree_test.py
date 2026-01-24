@@ -2,6 +2,7 @@
 测试 table，三列，类型分别为 id:int，name:string，ok:bool
 """
 from btree import new_b_tree
+from free_list import new_free_list
 from pager import new_pager
 from row import new_row
 from value.bool import new_bool
@@ -11,8 +12,9 @@ from value.string import new_string
 
 def test_set():
     pager = new_pager("test.db")
+    list_ = new_free_list(pager)
     degree = 2
-    tree = new_b_tree(pager, degree)
+    tree = new_b_tree(pager, list_, degree)
     datas = [
         new_row(1, [new_int(1), new_string('hello'), new_bool(True)]),
         new_row(2, [new_int(2), new_string('world'), new_bool(False)]),
@@ -27,8 +29,9 @@ def test_set():
 
 def test_get():
     pager = new_pager("test.db")
+    list_ = new_free_list(pager)
     degree = 2
-    tree = new_b_tree(pager, degree)
+    tree = new_b_tree(pager, list_, degree)
     datas = [
         new_row(1, [new_int(1), new_string('hello'), new_bool(True)]),
         new_row(2, [new_int(2), new_string('world'), new_bool(False)]),
@@ -45,8 +48,9 @@ def test_get():
 
 def test_delete():
     pager = new_pager("test.db")
+    list_ = new_free_list(pager)
     degree = 2
-    tree = new_b_tree(pager, degree)
+    tree = new_b_tree(pager, list_, degree)
     datas = [
         new_row(1, [new_int(1), new_string('hello'), new_bool(True)]),
         new_row(2, [new_int(2), new_string('world'), new_bool(False)]),
